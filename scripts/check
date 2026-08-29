@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Everything CI runs, plus the twelve tests it cannot.
+#
+# GitHub's runners have no SUMO and no TransSimHub -- TransSimHub is a sibling
+# checkout rather than a package, so there is nothing for CI to install -- and
+# the `slow` tests need both. They also need SUMO_HOME, which the tshub conda
+# environment sets in its activate.d hook, so this goes through `conda run`
+# rather than calling the environment's python directly. Calling it directly
+# skips activation, and the slow tests then die inside TransSimHub's
+# `sys.exit("Please declare the environment variable 'SUMO_HOME'")`.
+#
+# Usage:  scripts/check          full suite, ~3 minutes
+#         scripts/check -m "not slow"    what CI runs, ~1 minute
+set -euo pipefail
+
+ENV_NAME="${BEVLIGHT_CONDA_ENV:-tshub}"
+cd "$(dirname "$0")/.."
+
+echo "== ruff"
+conda run -n "$ENV_NAME" --no-capture-output ruff check bevlight tests
+
+echo "== pytest (${*:-full suite, including slow})"
+conda run -n "$ENV_NAME" --no-capture-output python -m pytest "$@"

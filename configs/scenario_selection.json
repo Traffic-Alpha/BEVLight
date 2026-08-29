@@ -1,0 +1,210 @@
+{
+  "name": "bevlight_single_junction_active_set_v2",
+  "raw_pool": {
+    "junctions": 12,
+    "plans_per_junction": 2,
+    "demands_per_plan": 5,
+    "total_scenarios": 120
+  },
+  "active_set": {
+    "total_scenarios": 61,
+    "plan_names": {
+      "easy": "plan_A",
+      "normal": "plan_B"
+    },
+    "train_demands": [
+      "low_density",
+      "high_density",
+      "fluctuating_commuter"
+    ],
+    "test_demands": [
+      "increasing_demand",
+      "random_perturbation"
+    ],
+    "notes": {
+      "plan_pairs": "A junction contributes two plans only when the plans actually differ. Beijing_Beihuan does not, and is trained on one plan."
+    }
+  },
+  "splits": {
+    "train": [
+      {
+        "junction": "Beijing_Beihuan",
+        "plans": [
+          "normal"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ],
+        "note": "Single plan on purpose: easy and normal are the same signal plan at this T-junction (identical tlLogic, bit-identical control results), so the second plan would be a duplicate rather than a cross-plan case."
+      },
+      {
+        "junction": "Beijing_Beishahe",
+        "plans": [
+          "easy",
+          "normal"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      },
+      {
+        "junction": "Beijing_Changjianglu",
+        "plans": [
+          "easy",
+          "normal"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      },
+      {
+        "junction": "Beijing_Gaojiaoyuan",
+        "plans": [
+          "easy",
+          "normal"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      },
+      {
+        "junction": "Chengdu_Chenghannanlu",
+        "plans": [
+          "easy",
+          "normal"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      },
+      {
+        "junction": "France_Massy",
+        "plans": [
+          "easy",
+          "normal"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      },
+      {
+        "junction": "Tianjin_zhijingdao",
+        "plans": [
+          "easy"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      },
+      {
+        "junction": "Hongkong_YMT",
+        "plans": [
+          "normal"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      },
+      {
+        "junction": "Beijing_Pinganli",
+        "plans": [
+          "easy"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      },
+      {
+        "junction": "Beijing_Yongrunlu",
+        "plans": [
+          "normal"
+        ],
+        "demands": [
+          "low_density",
+          "high_density",
+          "fluctuating_commuter"
+        ]
+      }
+    ],
+    "cross_plan_test": [
+      {
+        "junction": "Tianjin_zhijingdao",
+        "train_plan": "easy",
+        "test_plan": "normal",
+        "demands": [
+          "increasing_demand",
+          "random_perturbation"
+        ]
+      },
+      {
+        "junction": "Hongkong_YMT",
+        "train_plan": "normal",
+        "test_plan": "easy",
+        "demands": [
+          "increasing_demand",
+          "random_perturbation"
+        ]
+      },
+      {
+        "junction": "Beijing_Pinganli",
+        "train_plan": "easy",
+        "test_plan": "normal",
+        "demands": [
+          "increasing_demand",
+          "random_perturbation"
+        ]
+      },
+      {
+        "junction": "Beijing_Yongrunlu",
+        "train_plan": "normal",
+        "test_plan": "easy",
+        "demands": [
+          "increasing_demand",
+          "random_perturbation"
+        ]
+      }
+    ],
+    "cross_structure_test": [
+      {
+        "junction": "Chengdu_Guanghua",
+        "plans": [
+          "easy",
+          "normal"
+        ],
+        "demands": [
+          "increasing_demand",
+          "random_perturbation"
+        ]
+      },
+      {
+        "junction": "SouthKorea_Songdo",
+        "plans": [
+          "easy",
+          "normal"
+        ],
+        "demands": [
+          "increasing_demand",
+          "random_perturbation"
+        ]
+      }
+    ]
+  }
+}

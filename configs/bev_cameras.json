@@ -1,0 +1,415 @@
+{
+  "generated_by": "bevlight/scenario/build_lane_masks.py",
+  "pixels_per_meter": 11.355556,
+  "target_visible_approach_m": 60.0,
+  "junctions": {
+    "Beijing_Beihuan": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            833.7583333333333,
+            358.99500000000006
+          ],
+          "height": 172.73000000000002,
+          "ortho_size": 112.73,
+          "resolution": [
+            1274,
+            1274
+          ],
+          "visible_approach_median_m": 61.32,
+          "queue_capacity_vehicles": 8.18
+        },
+        "normal": {
+          "center": [
+            833.7583333333333,
+            358.99500000000006
+          ],
+          "height": 172.73000000000002,
+          "ortho_size": 112.73,
+          "resolution": [
+            1274,
+            1274
+          ],
+          "visible_approach_median_m": 61.32,
+          "queue_capacity_vehicles": 8.18
+        }
+      }
+    },
+    "Beijing_Beishahe": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            451.78999999999996,
+            387.465
+          ],
+          "height": 191.48,
+          "ortho_size": 131.48,
+          "resolution": [
+            1498,
+            1498
+          ],
+          "visible_approach_median_m": 60.01,
+          "queue_capacity_vehicles": 8.0
+        },
+        "normal": {
+          "center": [
+            451.78999999999996,
+            387.465
+          ],
+          "height": 191.48,
+          "ortho_size": 131.48,
+          "resolution": [
+            1498,
+            1498
+          ],
+          "visible_approach_median_m": 60.01,
+          "queue_capacity_vehicles": 8.0
+        }
+      }
+    },
+    "Beijing_Changjianglu": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            926.3675,
+            180.35722222222225
+          ],
+          "height": 208.28,
+          "ortho_size": 148.28,
+          "resolution": [
+            1680,
+            1680
+          ],
+          "visible_approach_median_m": 60.01,
+          "queue_capacity_vehicles": 8.0
+        },
+        "normal": {
+          "center": [
+            926.3675,
+            180.35722222222225
+          ],
+          "height": 208.28,
+          "ortho_size": 148.28,
+          "resolution": [
+            1680,
+            1680
+          ],
+          "visible_approach_median_m": 60.01,
+          "queue_capacity_vehicles": 8.0
+        }
+      }
+    },
+    "Beijing_Gaojiaoyuan": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            943.7458333333334,
+            438.72499999999997
+          ],
+          "height": 200.86,
+          "ortho_size": 140.86,
+          "resolution": [
+            1596,
+            1596
+          ],
+          "visible_approach_median_m": 60.1,
+          "queue_capacity_vehicles": 8.01
+        },
+        "normal": {
+          "center": [
+            943.7458333333334,
+            438.72499999999997
+          ],
+          "height": 200.86,
+          "ortho_size": 140.86,
+          "resolution": [
+            1596,
+            1596
+          ],
+          "visible_approach_median_m": 60.1,
+          "queue_capacity_vehicles": 8.01
+        }
+      }
+    },
+    "Beijing_Pinganli": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            1436.8679166666666,
+            957.9620833333333
+          ],
+          "height": 207.89,
+          "ortho_size": 147.89,
+          "resolution": [
+            1680,
+            1680
+          ],
+          "visible_approach_median_m": 60.11,
+          "queue_capacity_vehicles": 8.02
+        },
+        "normal": {
+          "center": [
+            1436.8679166666666,
+            957.9620833333333
+          ],
+          "height": 207.89,
+          "ortho_size": 147.89,
+          "resolution": [
+            1680,
+            1680
+          ],
+          "visible_approach_median_m": 60.11,
+          "queue_capacity_vehicles": 8.02
+        }
+      }
+    },
+    "Beijing_Yongrunlu": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            395.8979166666667,
+            896.2172916666667
+          ],
+          "height": 207.5,
+          "ortho_size": 147.5,
+          "resolution": [
+            1680,
+            1680
+          ],
+          "visible_approach_median_m": 60.18,
+          "queue_capacity_vehicles": 8.02
+        },
+        "normal": {
+          "center": [
+            395.8979166666667,
+            896.2172916666667
+          ],
+          "height": 207.5,
+          "ortho_size": 147.5,
+          "resolution": [
+            1680,
+            1680
+          ],
+          "visible_approach_median_m": 60.18,
+          "queue_capacity_vehicles": 8.02
+        }
+      }
+    },
+    "Chengdu_Chenghannanlu": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            419.47333333333336,
+            62.65166666666667
+          ],
+          "height": 199.3,
+          "ortho_size": 139.3,
+          "resolution": [
+            1582,
+            1582
+          ],
+          "visible_approach_median_m": 60.31,
+          "queue_capacity_vehicles": 8.04
+        },
+        "normal": {
+          "center": [
+            419.47333333333336,
+            62.65166666666667
+          ],
+          "height": 199.3,
+          "ortho_size": 139.3,
+          "resolution": [
+            1582,
+            1582
+          ],
+          "visible_approach_median_m": 60.31,
+          "queue_capacity_vehicles": 8.04
+        }
+      }
+    },
+    "Chengdu_Guanghua": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": false,
+      "plans": {
+        "easy": {
+          "center": [
+            489.54583333333335,
+            322.0783333333333
+          ],
+          "height": 217.07,
+          "ortho_size": 157.07,
+          "resolution": [
+            1778,
+            1778
+          ],
+          "visible_approach_median_m": 61.57,
+          "queue_capacity_vehicles": 8.21
+        },
+        "normal": {
+          "center": [
+            490.66999999999996,
+            323.69416666666666
+          ],
+          "height": 220.98,
+          "ortho_size": 160.98,
+          "resolution": [
+            1834,
+            1834
+          ],
+          "visible_approach_median_m": 60.08,
+          "queue_capacity_vehicles": 8.01
+        }
+      }
+    },
+    "France_Massy": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            171.885,
+            243.42
+          ],
+          "height": 183.48000000000002,
+          "ortho_size": 123.48,
+          "resolution": [
+            1400,
+            1400
+          ],
+          "visible_approach_median_m": 60.44,
+          "queue_capacity_vehicles": 8.06
+        },
+        "normal": {
+          "center": [
+            171.885,
+            243.42
+          ],
+          "height": 183.48000000000002,
+          "ortho_size": 123.48,
+          "resolution": [
+            1400,
+            1400
+          ],
+          "visible_approach_median_m": 60.44,
+          "queue_capacity_vehicles": 8.06
+        }
+      }
+    },
+    "Hongkong_YMT": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            173.15741666666668,
+            200.56591666666665
+          ],
+          "height": 208.48,
+          "ortho_size": 148.48,
+          "resolution": [
+            1680,
+            1680
+          ],
+          "visible_approach_median_m": 60.09,
+          "queue_capacity_vehicles": 8.01
+        },
+        "normal": {
+          "center": [
+            173.15741666666668,
+            200.56591666666665
+          ],
+          "height": 208.48,
+          "ortho_size": 148.48,
+          "resolution": [
+            1680,
+            1680
+          ],
+          "visible_approach_median_m": 60.09,
+          "queue_capacity_vehicles": 8.01
+        }
+      }
+    },
+    "SouthKorea_Songdo": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            902.4181547619048,
+            1644.0918253968252
+          ],
+          "height": 215.51,
+          "ortho_size": 155.51,
+          "resolution": [
+            1764,
+            1764
+          ],
+          "visible_approach_median_m": 61.43,
+          "queue_capacity_vehicles": 8.19
+        },
+        "normal": {
+          "center": [
+            902.4181547619048,
+            1644.0918253968252
+          ],
+          "height": 215.51,
+          "ortho_size": 155.51,
+          "resolution": [
+            1764,
+            1764
+          ],
+          "visible_approach_median_m": 61.43,
+          "queue_capacity_vehicles": 8.19
+        }
+      }
+    },
+    "Tianjin_zhijingdao": {
+      "canonical_plan": "normal",
+      "geometry_shared_across_plans": true,
+      "plans": {
+        "easy": {
+          "center": [
+            1733.6266666666668,
+            1170.2849999999999
+          ],
+          "height": 171.95,
+          "ortho_size": 111.95,
+          "resolution": [
+            1274,
+            1274
+          ],
+          "visible_approach_median_m": 60.62,
+          "queue_capacity_vehicles": 8.08
+        },
+        "normal": {
+          "center": [
+            1733.6266666666668,
+            1170.2849999999999
+          ],
+          "height": 171.95,
+          "ortho_size": 111.95,
+          "resolution": [
+            1274,
+            1274
+          ],
+          "visible_approach_median_m": 60.62,
+          "queue_capacity_vehicles": 8.08
+        }
+      }
+    }
+  }
+}

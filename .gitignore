@@ -1,0 +1,57 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.DS_Store
+.idea/
+.vscode/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated, expensive: episode trajectories, rendered frames, feature caches.
+# Hours of Blender live here; this is the one that is not cheap to recreate.
+data/
+
+# Generated, cheap: training runs, backbone weights, figures, logs, result JSON.
+# Safe to delete; every command that writes here can be rerun.
+runs/
+wandb/
+
+*.egg-info/
+build/
+dist/
+
+# Internal design notes and discussion, not part of the public repository.
+docs/
+
+*.blend1
+
+# Per-junction scenario data: 296M of GeoTIFF, 68M of .blend, plus the networks
+# and routes the build commands regenerate. One .tif is 100M, which GitHub
+# rejects outright. The two hand-calibrated scripts per junction are code and
+# stay tracked; everything beside them is rebuildable.
+/scenarios/**
+!/scenarios/*/
+!/scenarios/*/config.py
+!/scenarios/*/generate_routes.py
+
+# The rest of a junction is generated, but 5.5MB of it is what the tests read,
+# and regenerating it needs the 296M of GeoTIFF that is not here. Without this
+# a fresh clone can run 188 of 459 tests; with it, all of them.
+!/scenarios/*/*.sumocfg
+!/scenarios/*/networks/
+!/scenarios/*/networks/*.net.xml
+!/scenarios/*/lane_mask/
+!/scenarios/*/lane_mask/lane_mask.json
+!/scenarios/*/lane_mask/lane_mask_*.png
+!/scenarios/*/routes/
+!/scenarios/*/routes/*.rou.xml
+!/scenarios/*/add/
+!/scenarios/*/add/map.poly.xml
+!/scenarios/*/add/e2.add.xml
+!/scenarios/*/add/tls.add.xml
+
+# The paper is its own Overleaf-synced git repository; never nest it in this one.
+/overleaf_paper/

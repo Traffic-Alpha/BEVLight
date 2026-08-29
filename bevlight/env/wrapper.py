@@ -30,6 +30,17 @@ from ..data.collate import MAX_LANES, MAX_MOVEMENTS, MAX_PHASES
 from .gym_env import LANE_STATE_CHANNELS, JunctionEnv
 
 
+def scenario_key(junction: str, plan: str, demand: str) -> str:
+    """`Scenario.key`'s spelling, written once.
+
+    Two things join on it -- the episode record a training curve is normalised
+    by, and the per-scenario reward divisor -- and both used to build it
+    inline. A drift between them would not raise; it would silently miss every
+    lookup and fall back to a scale of 1.
+    """
+    return f"{junction}__{plan}__{demand}"
+
+
 class JunctionGymEnv:
     """The `gymnasium.Env` behaviour over `JunctionEnv`, minus the base class.
 
@@ -47,7 +58,8 @@ class JunctionGymEnv:
 
     metadata = {"render_modes": []}
 
-    def __init__(self, embed_dim: int = 384, scenarios=None, **kwargs):
+    def __init__(self, embed_dim: int = 384, scenarios=None,
+                 reward_scale: dict[str, float] | None = None, **kwargs):
         import gymnasium as gym
 
         self.gym = gym
@@ -57,6 +69,14 @@ class JunctionGymEnv:
         # walks the list instead. The observation is padded to MAX_LANES and
         # MAX_PHASES, so the spaces do not move when the junction does.
         self.scenarios = list(scenarios) if scenarios else None
+        # Per-scenario divisor. A generalising run mixes scenarios whose reward
+        # scales differ by up to 81x, and the objective then weights them by
+        # that spread while the evaluation counts each scenario once. Dividing
+        # by a positive constant does not change the best policy *within* a
+        # scenario; it changes only the weight between them, which is the
+        # intent. `None` leaves the reward as the physical quantity it is.
+        self.reward_scale = dict(reward_scale) if reward_scale else None
+        self._scale = 1.0
         self._episode = 0
         # The environment built here is the one the first episode runs; rotation
         # starts at the second reset. Without this the list's first scenario is
@@ -133,6 +153,10 @@ class JunctionGymEnv:
             self.inner.close()
             self.inner = self._open_scenario()
         self._used = True
+        if self.reward_scale is not None:
+            key = scenario_key(self.inner.junction, self.inner.plan,
+                               self.inner.demand)
+            self._scale = abs(self.reward_scale.get(key, 1.0)) or 1.0
         observation, _, _, info = self.inner.reset()
         return self._pack(observation, info)
 
@@ -145,13 +169,14 @@ class JunctionGymEnv:
             self.inner.current_phase
         )
         observation, reward, done, info = self.inner.step(action)
+        if self.reward_scale is not None:
+            info["reward_unscaled"] = reward
+            reward = reward / self._scale
         packed, info = self._pack(observation, info)
         if done:
             info["episode_summary"] = self.inner.summary()
-            # `Scenario.key`'s spelling, so an episode record joins the
-            # reference table without a translation step in between.
-            info["scenario"] = (f"{self.inner.junction}__{self.inner.plan}"
-                                f"__{self.inner.demand}")
+            info["scenario"] = scenario_key(self.inner.junction,
+                                            self.inner.plan, self.inner.demand)
         return packed, reward, done, done, info
 
     def action_masks(self) -> np.ndarray:

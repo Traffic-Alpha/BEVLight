@@ -275,3 +275,17 @@ def test_a2c_is_left_at_its_own_default():
 
 def test_an_explicit_n_steps_is_left_alone():
     assert built_kwargs("ppo", 16, n_steps=512)["n_steps"] == 512
+
+
+def test_the_key_two_lookups_join_on_is_the_scenarios_own():
+    """A training curve is normalised by it and so is the reward divisor.
+
+    Both used to build the string inline. A drift between them and
+    `Scenario.key` would not raise -- every lookup would miss and fall back to a
+    scale of 1, which looks exactly like normalisation being off.
+    """
+    from bevlight.env.wrapper import scenario_key
+    from bevlight.scenario.selection import Scenario
+
+    scenario = Scenario("Hongkong_YMT", "normal", "high_density", "train")
+    assert scenario_key("Hongkong_YMT", "normal", "high_density") == scenario.key

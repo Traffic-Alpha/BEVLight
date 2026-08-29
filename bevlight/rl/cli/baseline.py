@@ -28,6 +28,7 @@ from ..baselines import (
     controller_rollout,
     progress_callback,
     resolve,
+    reward_reference,
     rollout,
 )
 
@@ -66,6 +67,11 @@ def parse_args(argv=None) -> argparse.Namespace:
                              "every held-out one, which is the comparison that matters.")
     parser.add_argument("--junction", nargs="+", default=None,
                         help="Restrict the training scenarios to these junctions.")
+    parser.add_argument("--normalize-reward", action="store_true",
+                        help="Divide each scenario's reward by max-pressure's cost "
+                             "there, so scenarios weigh equally in the objective. "
+                             "Measured by `bevlight rl reward-reference`; without "
+                             "that table this is refused rather than silently skipped.")
     parser.add_argument("--observe", default="window", choices=("window", "full_lane"),
                         help="How far down the approach the policy may look.")
     parser.add_argument("--steps", type=int, default=60000,
@@ -232,9 +238,21 @@ def main(argv=None) -> int:
     run_dir.mkdir(parents=True, exist_ok=True)
     monitor_dir = run_dir / "monitor"
     monitor_dir.mkdir(parents=True, exist_ok=True)
+    scale = None
+    if args.normalize_reward:
+        scale = reward_reference(args.reward)
+        missing = [s.key for s in training if s.key not in scale]
+        if missing:
+            raise SystemExit(
+                f"--normalize-reward needs a reference for every training "
+                f"scenario; {len(missing)} are missing (e.g. {missing[0]}). "
+                f"Run `bevlight rl reward-reference` first."
+            )
+        print(f"[plan] rewards divided by max-pressure's cost per scenario "
+              f"({len(scale)} measured)")
     envs = make_vec_env(
         training, num_envs=args.num_envs, seed=args.seed,
-        monitor_dir=str(monitor_dir),
+        monitor_dir=str(monitor_dir), reward_scale=scale,
         render=False, allow_any_scenario=True, reward=args.reward,
         observe=args.observe, num_seconds=args.episode_steps,
     )
@@ -253,7 +271,8 @@ def main(argv=None) -> int:
 
     result = {
         "algorithm": args.algo, "reward": args.reward, "observe": args.observe,
-        "masked": algorithm.masked, "steps": args.steps, "seed": args.seed,
+        "masked": algorithm.masked,
+        "normalize_reward": bool(args.normalize_reward), "steps": args.steps, "seed": args.seed,
         "train_split": args.train_split, "train_scenarios": len(training),
         "train_junctions": sorted({s.junction for s in training}),
         "train_minutes": round(trained_s / 60, 2), "eval": {},

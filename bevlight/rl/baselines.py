@@ -213,8 +213,13 @@ def normalised_return(episodes, reference: dict[str, float]) -> float | None:
     recently.
 
     Dividing by `reference * length` puts every episode on one axis where 1.0
-    is max-pressure's own performance on that same scenario, above 1.0 is
-    better, and the number means the same thing wherever it was measured.
+    is max-pressure's own performance on that same scenario, and the number
+    means the same thing wherever it was measured.
+
+    Both terms are costs and both are negative, so the ratio is positive and
+    **larger is worse**: 4.38 is a policy paying four times what max-pressure
+    pays, not four times better. Reading it the other way round is the obvious
+    mistake and this sentence is here to stop it.
     """
     ratios = []
     for episode in episodes:
@@ -277,7 +282,7 @@ def progress_callback(run_dir, every: int = 5000, started: float | None = None,
             self.history.append(entry)
             history_path.write_text(json.dumps(self.history, indent=2))
             ratio = entry["return_vs_max_pressure"]
-            shown = "n/a" if ratio is None else f"{ratio:.3f}x mp"
+            shown = "n/a" if ratio is None else f"{ratio:.2f}x mp cost"
             raw = "n/a" if entry["return"] is None else f"{entry['return']:+.2f}"
             print(f"[train] {entry['steps']:>7} steps  {entry['episodes']:>4} eps  "
                   f"{entry['scenarios_seen']:>2} scen  raw {raw:>9}  {shown:>10}  "
@@ -308,6 +313,7 @@ def controller_rollout(spec: str, junction: str, plan: str, demand: str,
     differs, and this discards it.
     """
     import json
+    import os
 
     from ..paths import REPORTS_ROOT
     from ._internal import rollout as rollout_module
@@ -323,6 +329,13 @@ def controller_rollout(spec: str, junction: str, plan: str, demand: str,
     summary = rollout_module.rollout_controller(
         spec, junction, plan, demand, seed, "visible_queue", steps
     )
+    # Written through a temporary file in the same directory and renamed, which
+    # is atomic on one filesystem. Cells of the grid run in parallel and two of
+    # them can want the same baseline at the same time; both computing it is
+    # merely wasteful, but a reader seeing a half-written file is a crash in
+    # something that was supposed to be a cache hit.
     cache_dir.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(summary, indent=2))
+    temporary = path.with_suffix(f".{os.getpid()}.tmp")
+    temporary.write_text(json.dumps(summary, indent=2))
+    temporary.replace(path)
     return summary

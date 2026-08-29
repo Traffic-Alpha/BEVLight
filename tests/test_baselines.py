@@ -248,3 +248,30 @@ def test_asking_for_everything_or_more_returns_everything():
     assert sample(ordered, None) == ordered
     assert sample(ordered, 3) == ordered
     assert sample(ordered, 99) == ordered
+
+
+def test_an_on_policy_baseline_gets_its_stock_number_of_updates():
+    """`n_steps` is per environment, so the rollout buffer scales with the vector.
+
+    PPO's stock 2048 becomes 32768 at sixteen workers, and a 60 000-step budget
+    then buys one policy update where a single environment would have bought
+    twenty-nine. The first wave of the grid ran that way and measured an
+    untrained network.
+    """
+    assert built_kwargs("ppo", 16)["n_steps"] == 128
+    assert built_kwargs("maskable_ppo", 16)["n_steps"] == 128
+    assert built_kwargs("ppo", 1)["n_steps"] == 2048
+
+
+def test_a2c_is_left_at_its_own_default():
+    """Its `n_steps` is 5 and cannot be divided by 16 without becoming one-step TD.
+
+    That is a different algorithm rather than the same one configured correctly,
+    and A2C does not need the correction: 80 per buffer still buys 750 updates
+    out of the same budget.
+    """
+    assert "n_steps" not in built_kwargs("a2c", 16)
+
+
+def test_an_explicit_n_steps_is_left_alone():
+    assert built_kwargs("ppo", 16, n_steps=512)["n_steps"] == 512

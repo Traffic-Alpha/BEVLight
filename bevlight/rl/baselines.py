@@ -42,6 +42,9 @@ class Algorithm:
     masked: bool
     #: Off-policy algorithms keep a replay buffer; on-policy ones roll and discard.
     off_policy: bool
+    #: SB3's own `n_steps` default, which is *per environment*. None for
+    #: off-policy algorithms, which have no rollout buffer.
+    stock_n_steps: int | None = None
 
     def load_class(self):
         import importlib
@@ -57,11 +60,11 @@ ALGORITHMS = {
         Algorithm("dqn", "stable_baselines3", "DQN", "MultiInputPolicy",
                   masked=False, off_policy=True),
         Algorithm("ppo", "stable_baselines3", "PPO", "MultiInputPolicy",
-                  masked=False, off_policy=False),
+                  masked=False, off_policy=False, stock_n_steps=2048),
         Algorithm("a2c", "stable_baselines3", "A2C", "MultiInputPolicy",
-                  masked=False, off_policy=False),
+                  masked=False, off_policy=False, stock_n_steps=5),
         Algorithm("maskable_ppo", "sb3_contrib", "MaskablePPO", "MultiInputPolicy",
-                  masked=True, off_policy=False),
+                  masked=True, off_policy=False, stock_n_steps=2048),
     )
 }
 
@@ -108,12 +111,27 @@ def build(algorithm: Algorithm, env, *, seed: int, **hyperparameters):
     library's own update-to-data ratio; leaving it alone would report the
     vectorisation as the algorithm's result.
 
-    On-policy algorithms are untouched: PPO and A2C consume the whole rollout
-    every update, so widening the vector widens the batch rather than thinning
-    the updates.
+    On-policy algorithms have the same defect in the other direction, and it is
+    worse. `n_steps` is *per environment*, so the rollout buffer is
+    `n_steps * n_envs`: PPO's stock 2048 becomes 32768 at sixteen workers, and a
+    60 000-step budget buys **one** policy update where a single environment
+    would have bought twenty-nine. The first wave of this grid ran PPO and
+    MaskablePPO that way; those two cells measured an untrained network.
+
+    Dividing `n_steps` by the vector restores the stock buffer, and with it the
+    stock update count. It is skipped where the vector is wider than the stock
+    buffer -- A2C's `n_steps` is 5 and cannot be divided by 16 without becoming
+    one-step TD, which is a different algorithm rather than the same one
+    correctly configured. A2C does not need it: at 80 per buffer it still gets
+    750 updates out of the same budget.
     """
+    num_envs = getattr(env, "num_envs", 1)
     if algorithm.off_policy and "gradient_steps" not in hyperparameters:
-        hyperparameters["gradient_steps"] = getattr(env, "num_envs", 1)
+        hyperparameters["gradient_steps"] = num_envs
+    if not algorithm.off_policy and "n_steps" not in hyperparameters:
+        stock = algorithm.stock_n_steps
+        if stock and stock // num_envs >= 1:
+            hyperparameters["n_steps"] = stock // num_envs
     return algorithm.load_class()(
         algorithm.policy, env, seed=seed, verbose=0, **hyperparameters
     )

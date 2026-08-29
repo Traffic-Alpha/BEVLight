@@ -25,6 +25,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from bevlight.data.collate import junction_structure
+from bevlight.env.gym_env import LANE_STATE_CHANNELS
 from bevlight.model.teacher import LANE_STATE_DIM, TeacherNet, teacher_config
 from bevlight.rl._internal.replay import STRUCTURE_KEYS, ReplayBuffer, to_batch
 from bevlight.rl.sac import policy
@@ -215,3 +216,13 @@ def test_every_decision_reaches_the_buffer_exactly_once():
             emitted += len(acc.push(f"e{episode}s{t}", 0, -1.0, "next", done, done))
             pushed += 1
     assert emitted == pushed, f"{pushed} decisions in, {emitted} out"
+
+
+def test_the_encoder_is_as_wide_as_the_state_the_env_stacks():
+    """One number, kept in two places, so the two places have to agree.
+
+    `env` names the channels where it stacks them and `model` declares the width
+    its first layer expects. A channel added on one side and not the other would
+    not raise -- it would silently reinterpret occupancy as saturation.
+    """
+    assert LANE_STATE_DIM == len(LANE_STATE_CHANNELS)

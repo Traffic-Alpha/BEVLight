@@ -87,6 +87,7 @@ class CostProbe:
             incoming_lanes=env.metrics.incoming_lanes,
             current_phase=env.current_phase,
             first_phase=env.signal_plan.phases[0],
+            plan=env.signal_plan,
         )
         for name in CANDIDATES:
             self.totals[name] += REWARDS[name](context)

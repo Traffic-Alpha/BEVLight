@@ -28,8 +28,10 @@ dependencies = [
 vision = ["opencv-python", "timm"]
 # Building networks and projecting the BEV camera. One-off scenario commands.
 scenario = ["shapely"]
-# The gymnasium/SB3 surface over JunctionEnv.
-rl = ["gymnasium", "stable-baselines3"]
+# The gymnasium/SB3 surface over JunctionEnv, and the off-the-shelf learners
+# the baselines run. sb3-contrib is here for MaskablePPO alone: it is the
+# only implementation that can read `JunctionGymEnv.action_masks`.
+rl = ["gymnasium", "stable-baselines3", "sb3-contrib"]
 dev = ["pytest", "ruff"]
 
 # TransSimHub comes from a sibling checkout (TSHUB_ROOT), not PyPI, and

@@ -36,6 +36,7 @@ illegitimate as observations for the same one.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,10 @@ class RewardContext:
     incoming_lanes: object   # lane ids of the incoming approaches
     current_phase: str
     first_phase: str
+    # The junction's wiring, needed by any cost defined over movements rather
+    # than over lanes. Optional so a caller that uses none of those need not
+    # build one, and absent it those costs say so rather than guessing.
+    plan: object = None
 
     @property
     def visible_incoming(self) -> list:
@@ -103,6 +108,55 @@ def full_wait(ctx: RewardContext) -> float:
     ) / ctx.lane_count
 
 
+@lru_cache(maxsize=1)
+def _max_pressure():
+    """One `MaxPressure` instance, for its pressure arithmetic only.
+
+    Imported here rather than at module scope so that reading a reward name does
+    not pull in the controller package.
+    """
+    from ..expert import MaxPressure
+
+    return MaxPressure()
+
+
+def pressure(ctx: RewardContext) -> float:
+    """The unserved pressure standing at the junction, per incoming lane.
+
+    Pressure of a movement is demand upstream minus room downstream; summed over
+    every movement it is what the junction is holding and has not yet released.
+    Max-pressure's rule is the greedy one-step minimiser of exactly this: serving
+    the phase with the highest pressure is the single decision that reduces the
+    total by the most. So a learner paid on this reward is being paid the state
+    cost whose greedy optimum *is* the heuristic it has to beat -- which is the
+    least favourable ground on which to claim that no learner passes it here, and
+    the reason this reward is worth running.
+
+    The arithmetic is `MaxPressure.movement_pressure` itself, not a restatement:
+    a reward called "pressure" computing something subtly different would make
+    the result attributable to neither.
+
+    Summed over movements rather than over the running phase's movements. The
+    latter is near zero by construction -- a phase that is green drains its own
+    incoming lanes, so what it is "releasing" measures how long it has been on
+    rather than how much traffic is waiting.
+
+    Divided by the incoming-lane count, like every other cost here, so junctions
+    of different sizes produce gradients of one scale.
+    """
+    if ctx.plan is None:
+        raise ValueError(
+            "The `pressure` reward is defined over movements, so it needs the "
+            "junction's SignalPlan; build the RewardContext with `plan=`."
+        )
+    controller = _max_pressure()
+    total = sum(
+        controller.movement_pressure(ctx.visible, ctx.plan, movement)
+        for movement in ctx.plan.movement_in_lanes
+    )
+    return total / ctx.lane_count
+
+
 def probe_constant_phase(ctx: RewardContext) -> float:
     """1 for every second not spent on the first phase. A known optimum.
 
@@ -124,10 +178,12 @@ REWARDS = {
     "visible_occupancy": visible_occupancy,
     "full_queue": full_queue,
     "full_wait": full_wait,
+    "pressure": pressure,
     "probe_constant_phase": probe_constant_phase,
 }
 
 #: The candidates a reward preflight ranks. `probe_constant_phase` is excluded
 #: on purpose: it is not a hypothesis about control, so ranking it against
 #: travel time would be measuring nothing.
-CANDIDATES = ("visible_queue", "full_queue", "full_wait", "visible_occupancy")
+CANDIDATES = ("visible_queue", "full_queue", "full_wait", "visible_occupancy",
+              "pressure")

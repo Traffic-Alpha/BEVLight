@@ -22,14 +22,28 @@ is published in `info` for algorithms that can use it directly.
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import numpy as np
 
 from ..data.collate import MAX_LANES, MAX_MOVEMENTS, MAX_PHASES
-from .gym_env import JunctionEnv
+from .gym_env import LANE_STATE_CHANNELS, JunctionEnv
 
 
 class JunctionGymEnv:
-    """`gymnasium.Env` over `JunctionEnv`, imported lazily so gym stays optional."""
+    """The `gymnasium.Env` behaviour over `JunctionEnv`, minus the base class.
+
+    Everything a gymnasium environment has to do is here, but `gymnasium.Env` is
+    not a base of it: this module is imported by `bevlight.rl`, and the SAC arm
+    that lives there drives `JunctionEnv` directly and has no use for gym. Making
+    gym a hard import to reach that arm would put an extra in the way of code
+    that does not use it.
+
+    Libraries that type-check their argument -- SB3 raises outright on anything
+    that is not a `gymnasium.Env` -- need the real base, so `gym_env_class()`
+    builds it on first use and `make_env` hands that out. Both spellings are the
+    same behaviour; only the ancestry differs.
+    """
 
     metadata = {"render_modes": []}
 
@@ -39,7 +53,16 @@ class JunctionGymEnv:
         self.gym = gym
         self.inner = JunctionEnv(**kwargs)
         self.embed_dim = embed_dim
-        self.obs_mode = "features" if kwargs.get("extractor") is not None else "frames"
+        # Three encodings of one world, chosen by how the env was built rather
+        # than by a separate argument that could disagree with it. `state` is
+        # what an off-the-shelf learner reads: no renderer, no backbone, the
+        # same per-lane numbers the results tables call the structured setting.
+        if kwargs.get("extractor") is not None:
+            self.obs_mode = "features"
+        elif kwargs.get("render", True):
+            self.obs_mode = "frames"
+        else:
+            self.obs_mode = "state"
 
         self.action_space = gym.spaces.Discrete(MAX_PHASES)
         self.observation_space = self._space()
@@ -58,6 +81,11 @@ class JunctionGymEnv:
         if self.obs_mode == "features":
             spaces["lane_features"] = gym.spaces.Box(
                 -np.inf, np.inf, (window, MAX_LANES, self.embed_dim), np.float32
+            )
+        elif self.obs_mode == "state":
+            spaces["lane_state"] = gym.spaces.Box(
+                -np.inf, np.inf,
+                (window, MAX_LANES, len(LANE_STATE_CHANNELS)), np.float32
             )
         return gym.spaces.Dict(spaces)
 
@@ -90,8 +118,32 @@ class JunctionGymEnv:
             info["episode_summary"] = self.inner.summary()
         return packed, reward, done, done, info
 
+    def action_masks(self) -> np.ndarray:
+        """Which of the `MAX_PHASES` actions this junction actually has.
+
+        The name is `sb3-contrib`'s convention: `MaskablePPO` looks for a method
+        called exactly this and removes the rest from its distribution. Without
+        it a junction with three phases spends half its action space on actions
+        that resolve to "hold", which reads as a bad algorithm rather than as a
+        mis-specified action space.
+        """
+        valid = np.zeros(MAX_PHASES, dtype=bool)
+        valid[: int(self.inner.signal_plan.num_phases)] = True
+        return valid
+
     def close(self):
         self.inner.close()
+
+
+@lru_cache(maxsize=1)
+def gym_env_class():
+    """`JunctionGymEnv` with `gymnasium.Env` genuinely behind it.
+
+    Built once, on first use, so importing this module still costs no gym.
+    """
+    import gymnasium as gym
+
+    return type("JunctionGymEnv", (JunctionGymEnv, gym.Env), {})
 
 
 def make_env(rank: int = 0, monitor_dir: str | None = None, **kwargs):
@@ -102,7 +154,7 @@ def make_env(rank: int = 0, monitor_dir: str | None = None, **kwargs):
     unit here rather than one per thread.
     """
     def _init():
-        env = JunctionGymEnv(**kwargs)
+        env = gym_env_class()(**kwargs)
         if monitor_dir:
             from stable_baselines3.common.monitor import Monitor
 
@@ -123,8 +175,17 @@ def make_vec_env(scenarios: list, num_envs: int | None = None,
 
     num_envs = num_envs or len(scenarios)
     chosen = [scenarios[i % len(scenarios)] for i in range(num_envs)]
+    # One seed per worker, as `env.vector.make_envs` does. Sharing one seed
+    # across the vector is not a smaller experiment, it is sixteen copies of the
+    # same episode: the traffic is seeded, so every worker would generate an
+    # identical trajectory and the batch would carry one sample's worth of
+    # information at sixteen times the cost.
+    base_seed = kwargs.pop("seed", 7)
+    # `spawn`, not the platform default `fork`, for the reason `env.vector` gives:
+    # libsumo is a process-global singleton, and a forked worker inherits a
+    # parent that has already touched it.
     return SubprocVecEnv([
-        make_env(rank=i, monitor_dir=monitor_dir,
+        make_env(rank=i, monitor_dir=monitor_dir, seed=base_seed + i,
                  junction=s.junction, plan=s.plan, demand=s.demand, **kwargs)
         for i, s in enumerate(chosen)
-    ])
+    ], start_method="spawn")

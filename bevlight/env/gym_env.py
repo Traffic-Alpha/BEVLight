@@ -34,6 +34,11 @@ import numpy as np
 from .render import image_modality, make_panda_renderer
 from .sumo import DECISION_INTERVAL_S, build_environment
 
+# The channels of `lane_state`, in order, named where they are stacked rather
+# than counted twice. `model.teacher.LANE_STATE_DIM` is the consumer's copy of
+# this width; `tests/test_teacher.py` fails if the two drift apart.
+LANE_STATE_CHANNELS = ("queue_target", "occupancy_target", "queue_valid")
+
 
 class JunctionEnv:
     """One (junction, plan, demand) as a `reset()` / `step(action)` environment.
@@ -215,8 +220,7 @@ class JunctionEnv:
         self._ensure_structure()
         targets = self._lane_targets(obs)
         self.lane_states.append(
-            np.stack([targets["queue_target"], targets["occupancy_target"],
-                      targets["queue_valid"]], axis=-1)
+            np.stack([targets[c] for c in LANE_STATE_CHANNELS], axis=-1)
         )
 
     def _window(self, values: list) -> np.ndarray:
@@ -466,6 +470,7 @@ class JunctionEnv:
             incoming_lanes=self.metrics.incoming_lanes,
             current_phase=self.current_phase,
             first_phase=self.signal_plan.phases[0],
+            plan=self.signal_plan,
         ))
 
     def _reward(self) -> float:

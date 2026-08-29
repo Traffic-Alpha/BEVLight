@@ -32,6 +32,25 @@ from ..baselines import (
 )
 
 
+def sample(scenarios: list, count: int | None) -> list:
+    """An evenly spaced subset, or all of them.
+
+    Taking the first N is a trap and was one: the splits are ordered by
+    junction, junctions differ in phase count, and the first eight of `train`
+    are all three-phase while `cross_plan_test` is entirely four-phase. A run
+    truncated that way reported "generalises across demand, fails across plan"
+    when what it had measured was "three phases work, four do not" -- the
+    sampling had separated the two groups by the very thing under test.
+
+    Evenly spaced keeps whatever mix the split has. It is still a subset, and
+    any reported number should use all of them.
+    """
+    if not count or count >= len(scenarios):
+        return list(scenarios)
+    step = len(scenarios) / count
+    return [scenarios[int(i * step)] for i in range(count)]
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Train an off-the-shelf RL baseline and score it against the rule-based controllers."
@@ -60,8 +79,9 @@ def parse_args(argv=None) -> argparse.Namespace:
     parser.add_argument("--eval-seeds", type=int, nargs="+", default=[7],
                         help="Seeds the policy and the baselines are both scored on.")
     parser.add_argument("--eval-scenarios", type=int, default=None,
-                        help="Score on at most this many scenarios per split. "
-                             "Default: all of them.")
+                        help="Score on an evenly spaced sample of this many "
+                             "scenarios per split. Default, and what any "
+                             "reported number should use: all of them.")
     parser.add_argument("--baseline", nargs="+", default=["max_pressure", "fixed_time"],
                         help="Rule-based controllers to pair against.")
     parser.add_argument("--run", default=None,
@@ -190,11 +210,8 @@ def main(argv=None) -> int:
     if not training:
         raise SystemExit("No training scenarios matched.")
     eval_splits = args.eval_split or list(SPLITS)
-    evaluation = {
-        name: (list(selection.split(name))[: args.eval_scenarios]
-               if args.eval_scenarios else list(selection.split(name)))
-        for name in eval_splits
-    }
+    evaluation = {name: sample(list(selection.split(name)), args.eval_scenarios)
+                  for name in eval_splits}
 
     name = args.run or f"{args.algo}_{args.reward}_{args.train_split}"
     run_dir = TRAIN_RUNS_ROOT / "baselines" / name

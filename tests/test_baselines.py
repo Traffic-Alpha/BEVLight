@@ -223,3 +223,28 @@ def test_the_reference_table_is_optional(tmp_path):
     from bevlight.rl.baselines import reward_reference
 
     assert reward_reference("visible_queue", tmp_path / "absent.json") == {}
+
+
+def test_a_truncated_evaluation_keeps_the_split_it_came_from():
+    """Taking the first N separated the groups by the thing under test.
+
+    The splits are ordered by junction and junctions differ in phase count, so
+    the first eight of `train` are all three-phase while `cross_plan_test` is
+    entirely four-phase. A run truncated that way reported "generalises across
+    demand, fails across plan" when what it had measured was "three phases work
+    and four do not".
+    """
+    from bevlight.rl.cli.baseline import sample
+
+    ordered = ["a3", "b3", "c3", "d3", "e3", "f4", "g4", "h4"]
+    assert sample(ordered, 4) == ["a3", "c3", "e3", "g4"]
+    assert [s[-1] for s in sample(ordered, 4)].count("4") == 1
+
+
+def test_asking_for_everything_or_more_returns_everything():
+    from bevlight.rl.cli.baseline import sample
+
+    ordered = ["a", "b", "c"]
+    assert sample(ordered, None) == ordered
+    assert sample(ordered, 3) == ordered
+    assert sample(ordered, 99) == ordered

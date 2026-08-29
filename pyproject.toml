@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bevlight"
+version = "0.1.0"
+description = "Generalizable traffic signal control from UAV bird's-eye-view visual observations"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "WANG Maonan" }]
+
+# Only what is imported at module top level lives here. Everything the code
+# imports inside a function is an extra below, because that laziness is the
+# design: `import bevlight.env.wrapper` must not drag in gymnasium, and the
+# layering test must run without torch or SUMO.
+#
+# Install the CUDA build of torch that matches the machine *before* this
+# package; pip leaves an already-installed torch alone.
+dependencies = [
+    "numpy",
+    "torch",
+]
+
+[project.optional-dependencies]
+# Rendering, lane masks, frame checks: cv2 everywhere, timm for the backbone.
+vision = ["opencv-python", "timm"]
+# Building networks and projecting the BEV camera. One-off scenario commands.
+scenario = ["shapely"]
+# The gymnasium/SB3 surface over JunctionEnv.
+rl = ["gymnasium", "stable-baselines3"]
+dev = ["pytest", "ruff"]
+
+# TransSimHub comes from a sibling checkout (TSHUB_ROOT), not PyPI, and
+# sumolib/traci come with SUMO (SUMO_HOME/tools). Neither is installable here.
+[project.scripts]
+bevlight = "bevlight.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["bevlight*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: needs a SUMO simulation; minutes rather than seconds",
+]

@@ -68,3 +68,50 @@ def test_the_gate_reads_the_best_baseline_not_the_worst():
 def test_a_baseline_that_cleared_nothing_cannot_gate_anything():
     ok, shortfall = comparability(summary(100), {"max_pressure": summary(0)})
     assert ok and shortfall == 0.0
+
+
+class FakeVecEnv:
+    def __init__(self, num_envs: int):
+        self.num_envs = num_envs
+
+
+def built_kwargs(algorithm_name: str, num_envs: int, **overrides) -> dict:
+    """What `build` would hand the constructor, without constructing one."""
+    import bevlight.rl.baselines as baselines
+
+    captured = {}
+
+    class Recorder:
+        def __init__(self, policy, env, **kwargs):
+            captured.update(kwargs)
+
+    algorithm = resolve(algorithm_name)
+    original = algorithm.load_class
+    object.__setattr__(algorithm, "load_class", lambda: Recorder)
+    try:
+        baselines.build(algorithm, FakeVecEnv(num_envs), seed=7, **overrides)
+    finally:
+        object.__setattr__(algorithm, "load_class", original)
+    return captured
+
+
+def test_an_off_policy_baseline_keeps_its_update_to_data_ratio_across_the_vector():
+    """SB3 counts `train_freq` in vector steps and `num_timesteps` in transitions.
+
+    Left alone, sixteen workers buy a sixteenth of the gradient steps for the
+    same number of transitions, and the run reports the vectorisation as the
+    algorithm's result. SB3 normalises `target_update_interval` by `n_envs` for
+    this reason and does not normalise this.
+    """
+    assert built_kwargs("dqn", 16)["gradient_steps"] == 16
+    assert built_kwargs("dqn", 1)["gradient_steps"] == 1
+
+
+def test_an_explicit_gradient_steps_is_left_alone():
+    assert built_kwargs("dqn", 16, gradient_steps=3)["gradient_steps"] == 3
+
+
+def test_on_policy_baselines_are_not_touched():
+    """PPO and A2C consume the whole rollout, so a wider vector is a wider batch."""
+    for name in ("ppo", "a2c", "maskable_ppo"):
+        assert "gradient_steps" not in built_kwargs(name, 16)

@@ -95,7 +95,24 @@ def build(algorithm: Algorithm, env, *, seed: int, **hyperparameters):
     Deliberately not tuned. A baseline tuned by us and beaten by us proves
     nothing about either; one run at stock settings is a statement about what
     the library does out of the box, which is what a reader wants to know.
+
+    One correction, and it is the opposite of tuning: SB3's off-policy defaults
+    are calibrated for a single environment, and `train_freq` counts *vector*
+    steps while `num_timesteps` counts environment transitions. So at sixteen
+    workers, `train_freq=4, gradient_steps=1` trains once per sixty-four
+    transitions instead of once per four -- the same budget bought a sixteenth of
+    the updates. SB3 normalises `target_update_interval` by `n_envs` for exactly
+    this reason (`dqn.py`, "Account for multiple environments") and does not
+    normalise this one. Scaling `gradient_steps` with the vector restores the
+    library's own update-to-data ratio; leaving it alone would report the
+    vectorisation as the algorithm's result.
+
+    On-policy algorithms are untouched: PPO and A2C consume the whole rollout
+    every update, so widening the vector widens the batch rather than thinning
+    the updates.
     """
+    if algorithm.off_policy and "gradient_steps" not in hyperparameters:
+        hyperparameters["gradient_steps"] = getattr(env, "num_envs", 1)
     return algorithm.load_class()(
         algorithm.policy, env, seed=seed, verbose=0, **hyperparameters
     )

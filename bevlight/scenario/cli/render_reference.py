@@ -10,7 +10,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from ...utils.paths import PROJECT_ROOT, SCENARIOS_ROOT
+from ...paths import PROJECT_ROOT, SCENARIOS_ROOT
 from .._internal.bev_reference import BEV_REFERENCE_ROOT, REFERENCE_SECOND, reference_dir
 
 

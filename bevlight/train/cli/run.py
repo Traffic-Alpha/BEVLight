@@ -19,7 +19,7 @@ from pathlib import Path
 from ...ablation.registry import describe, resolve
 from ...data.dataset import DecisionDataset
 from ...model.bevlight import BEVLightConfig
-from ...utils.paths import TRAIN_RUNS_ROOT
+from ...paths import TRAIN_RUNS_ROOT
 from ..loop import TrainConfig, action_distribution, train
 
 

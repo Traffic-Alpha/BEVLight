@@ -39,7 +39,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from ...utils.paths import (
+from ...paths import (
     EPISODES_ROOT,
     LANE_VIEWS_ROOT,
 )

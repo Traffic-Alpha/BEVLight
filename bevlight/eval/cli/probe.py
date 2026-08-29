@@ -45,7 +45,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from ...utils.paths import REPORTS_ROOT, SAMPLES_ROOT
+from ...paths import REPORTS_ROOT, SAMPLES_ROOT
 
 
 def load_cache(dataset_name: str) -> dict:

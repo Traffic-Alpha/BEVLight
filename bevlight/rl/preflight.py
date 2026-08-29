@@ -43,7 +43,7 @@ from pathlib import Path
 
 from ..env.rewards import CANDIDATES, REWARDS, RewardContext
 from ..scenario.selection import SPLITS
-from ..utils.paths import REPORTS_ROOT
+from ..paths import REPORTS_ROOT
 
 # What the reward is being asked to agree with. Travel time is the headline, and
 # the one a queue-shaped reward is least automatically aligned with.

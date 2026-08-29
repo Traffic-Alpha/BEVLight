@@ -91,7 +91,7 @@ def measure(junction: str, plan: str, demand: str, scale: float, seed: int = 7,
     from ...expert import SignalPlan
     from ...scenario.lane_mask import load_lane_mask
     from ...scenario.loader import load_junction_config
-    from ...utils.paths import LOG_ROOT
+    from ...paths import LOG_ROOT
     from tshub.tshub_env.tshub_env import TshubEnvironment
     from tshub.utils.init_log import set_logger
 

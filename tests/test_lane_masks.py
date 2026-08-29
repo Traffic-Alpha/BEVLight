@@ -144,7 +144,7 @@ def test_the_mask_raster_agrees_with_its_own_projection(junction, plan, demand):
 
     from bevlight.scenario.bev_camera import BevCamera
     from bevlight.scenario.lane_mask import load_lane_mask
-    from bevlight.utils.paths import BEV_CAMERA_TABLE, SCENARIOS_ROOT
+    from bevlight.paths import BEV_CAMERA_TABLE, SCENARIOS_ROOT
 
     mask = load_lane_mask(junction, plan)
     labels = mask.labels
@@ -195,7 +195,7 @@ def test_role_views_paint_only_their_own_role():
     """
     import numpy as np
 
-    from bevlight.utils.viz import ROLE_HUE_BAND, colorize
+    from bevlight.cli.viz import ROLE_HUE_BAND, colorize
 
     records = [
         {"mask_id": 1, "role": "incoming"},

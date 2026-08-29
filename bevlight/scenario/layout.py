@@ -22,7 +22,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..utils.paths import EPISODES_ROOT, SAMPLES_ROOT, episode_images_dir
+from ..paths import EPISODES_ROOT, SAMPLES_ROOT, episode_images_dir
 
 EPISODE_FILE = "episode.json"
 FRAME_SUFFIX = ".png"

@@ -32,7 +32,7 @@ PANDA_VARIANT = "panda_day"
 
 
 def mask_dir_of(junction: str) -> Path:
-    from ..utils.paths import lane_mask_dir
+    from ..paths import lane_mask_dir
 
     return lane_mask_dir(junction)
 

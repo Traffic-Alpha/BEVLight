@@ -37,11 +37,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from ...utils.paths import (
+from ...paths import (
     EPISODES_ROOT,
     episode_images_dir,
 )
-from ...utils.tshub import (
+from ...cli.tshub import (
     PROBE_BLENDER_RENDER,
     blender_render_episode_script as render_episode_script,
     find_blender,

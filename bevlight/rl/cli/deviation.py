@@ -105,7 +105,7 @@ def _evaluate(job: tuple) -> tuple:
     junction, plan, demand, seed, steps, overrides, index, action = job
     from tshub.utils.init_log import set_logger
 
-    from ...utils.paths import LOG_ROOT
+    from ...paths import LOG_ROOT
 
     set_logger(str(LOG_ROOT / junction), terminal_log_level="ERROR")
     episode = run_episode_with(junction, plan, demand, seed, steps, overrides)
@@ -197,7 +197,7 @@ def main(argv=None) -> int:
     import json
     from pathlib import Path
 
-    from ...utils.paths import REPORTS_ROOT
+    from ...paths import REPORTS_ROOT
 
     parser = argparse.ArgumentParser(
         description="Does deviating from max-pressure at any single decision help?")

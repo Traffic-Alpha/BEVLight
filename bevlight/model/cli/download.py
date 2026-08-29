@@ -17,7 +17,7 @@ import json
 import shutil
 from pathlib import Path
 
-from ...utils.paths import BACKBONE_ROOT, HF_CACHE_ROOT
+from ...paths import BACKBONE_ROOT, HF_CACHE_ROOT
 from .._internal.weights import KNOWN_BACKBONES, META_NAME, WEIGHTS_NAME, local_dir, local_weights
 
 

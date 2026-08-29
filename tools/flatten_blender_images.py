@@ -17,7 +17,7 @@ from bevlight.collect.cli.blender import (  # noqa: E402
     parse_conditions,
     selected_manifest_path,
 )
-from bevlight.utils.paths import EPISODES_ROOT  # noqa: E402
+from bevlight.paths import EPISODES_ROOT  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:

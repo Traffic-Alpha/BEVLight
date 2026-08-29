@@ -21,7 +21,7 @@ import argparse
 import json
 from pathlib import Path
 
-from ...utils.paths import TRAIN_RUNS_ROOT
+from ...paths import TRAIN_RUNS_ROOT
 from ..registry import ABLATIONS
 
 METRICS = ("avg_travel_time_s", "avg_waiting_time_s", "avg_queue_veh", "throughput")

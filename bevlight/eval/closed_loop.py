@@ -224,7 +224,7 @@ def main(argv=None) -> int:
     import time
 
     from ..env import run_episode
-    from ..utils.paths import TRAIN_RUNS_ROOT
+    from ..paths import TRAIN_RUNS_ROOT
     from .compare import build_controller, scenarios_for, tabulate
 
     args = parse_args(argv)
@@ -379,7 +379,7 @@ def summarize_main(argv: list[str] | None = None) -> int:
     import argparse
     import json
 
-    from ..utils.paths import TRAIN_RUNS_ROOT
+    from ..paths import TRAIN_RUNS_ROOT
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True)

@@ -332,7 +332,7 @@ def main(argv=None) -> int:
     import json
 
     from ..data.dataset import DecisionDataset
-    from ..utils.paths import TRAIN_RUNS_ROOT
+    from ..paths import TRAIN_RUNS_ROOT
 
     args = parse_args(argv)
     run_dir = TRAIN_RUNS_ROOT / args.run if args.run else None

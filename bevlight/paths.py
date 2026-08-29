@@ -25,8 +25,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# bevlight/utils/paths.py -> bevlight/utils -> bevlight -> repo root
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# bevlight/paths.py -> bevlight -> repo root. This is the one place in the tree
+# that counts `parents[n]`, which is exactly why it is also the one place a move
+# can break silently -- so it says so rather than resolving to somewhere wrong.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if not (PROJECT_ROOT / "pyproject.toml").is_file():  # pragma: no cover
+    raise RuntimeError(
+        f"paths.py resolved the repo root to {PROJECT_ROOT}, which holds no "
+        "pyproject.toml. It has been moved; fix the parents[n] above."
+    )
 
 # ---------------------------------------------------------------- tracked ----
 

@@ -44,7 +44,7 @@ def make_render_exporter(junction: str, plan: str, states: dict, tls_id: str, ep
     which is exactly why simulation can stay decoupled from rendering.
     """
     from ..scenario.bev_camera import bev_resolution
-    from ..utils.paths import scene_assets_dir
+    from ..paths import scene_assets_dir
     from tshub.tshub_env3d.core import build_tls_rigs
     from tshub.tshub_env3d.core.export import BlenderEpisodeExporter
 
@@ -95,7 +95,7 @@ def make_panda_renderer(
     import os
 
     from ..scenario.bev_camera import apply_junction_render_preset
-    from ..utils.paths import scene_assets_dir
+    from ..paths import scene_assets_dir
     from tshub.tshub_env3d.core import SceneStatic, build_tls_rigs
     from tshub.tshub_env3d.renderers import create_renderer
 

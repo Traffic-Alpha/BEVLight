@@ -45,7 +45,7 @@ import json
 import sys
 from pathlib import Path
 
-from ...utils.paths import (
+from ...paths import (
     EPISODES_ROOT,
     LANE_MASK_CHECK_ROOT as OVERLAY_ROOT,
     LANE_MASK_DIR_NAME as MASK_DIR_NAME,
@@ -53,8 +53,8 @@ from ...utils.paths import (
     PROJECT_ROOT,
     SCENARIOS_ROOT,
 )
-from ...utils.viz import colorize, write_preview
-from ...utils.tshub import configure_tshub_import, resolve_tshub_root  # noqa: F401
+from ...cli.viz import colorize, write_preview
+from ...cli.tshub import configure_tshub_import, resolve_tshub_root  # noqa: F401
 
 DEFAULT_RESOLUTIONS = ("1022x1022", "720x720")
 META_NAME = "lane_mask.json"

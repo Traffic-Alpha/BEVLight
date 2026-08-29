@@ -203,7 +203,7 @@ def compare(runs: dict[str, Path]) -> None:
 def main(argv=None) -> int:
     import argparse
 
-    from ...utils.paths import TRAIN_RUNS_ROOT
+    from ...paths import TRAIN_RUNS_ROOT
 
     parser = argparse.ArgumentParser(description="Diagnose a teacher run.")
     parser.add_argument("--run", default="gate1_ymt_high")

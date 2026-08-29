@@ -707,7 +707,7 @@ def parse_args(argv=None):
 
 
 def main(argv=None) -> int:
-    from ..utils.paths import TRAIN_RUNS_ROOT
+    from ..paths import TRAIN_RUNS_ROOT
 
     args = parse_args(argv)
     config = SACConfig(

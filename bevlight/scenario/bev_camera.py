@@ -41,7 +41,7 @@ import json
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
-from ..utils.paths import BEV_CAMERA_TABLE
+from ..paths import BEV_CAMERA_TABLE
 
 DEFAULT_BEV_ORTHO_SIZE = 90.0
 DEFAULT_BEV_ENV = "normal_high_density"

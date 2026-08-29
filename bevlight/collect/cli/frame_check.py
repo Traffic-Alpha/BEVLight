@@ -18,7 +18,7 @@ import json
 import random
 from pathlib import Path
 
-from ...utils.paths import EPISODES_ROOT, FRAME_CHECK_ROOT
+from ...paths import EPISODES_ROOT, FRAME_CHECK_ROOT
 
 
 def episode_meta(episode_dir: Path) -> dict | None:
@@ -67,7 +67,7 @@ def write_checks(picks, out_dir: Path) -> list[Path]:
     import cv2
     import numpy as np
 
-    from ...utils.viz import colorize
+    from ...cli.viz import colorize
     from ...scenario.lane_mask import load_lane_mask
 
     out_dir.mkdir(parents=True, exist_ok=True)

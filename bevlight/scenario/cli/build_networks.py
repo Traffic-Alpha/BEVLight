@@ -24,9 +24,9 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
-from ...utils.paths import SCENARIOS_ROOT
-from ...utils.tshub import configure_tshub_import  # noqa: F401
-from ...utils.tshub import resolve_tshub_root as _resolve_tshub_root
+from ...paths import SCENARIOS_ROOT
+from ...cli.tshub import configure_tshub_import  # noqa: F401
+from ...cli.tshub import resolve_tshub_root as _resolve_tshub_root
 
 DEFAULT_NET_PLAN = "normal"
 PROBE_OSM_BUILD = Path("tshub/sumo_tools/osm_build.py")

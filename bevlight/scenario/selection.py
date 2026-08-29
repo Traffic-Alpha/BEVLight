@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from ..utils.paths import SCENARIO_SELECTION
+from ..paths import SCENARIO_SELECTION
 
 # `cross_demand_test` is derived rather than listed: it is the training
 # junctions and plans under the two demands held out of training. The three

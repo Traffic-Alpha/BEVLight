@@ -87,7 +87,7 @@ def run_episode(
     from ..eval.metrics import EpisodeMetrics
     from ..expert.base import SignalPlan
     from ..scenario.lane_mask import load_lane_mask
-    from ..utils.paths import LOG_ROOT, PROJECT_ROOT, episode_images_dir
+    from ..paths import LOG_ROOT, PROJECT_ROOT, episode_images_dir
     from tshub.tshub_env3d.core import build_frame
     from tshub.utils.init_log import set_logger
 

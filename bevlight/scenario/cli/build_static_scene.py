@@ -30,8 +30,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from ...utils.paths import SCENARIOS_ROOT, SCENE_ASSETS_DIR_NAME
-from ...utils.tshub import (
+from ...paths import SCENARIOS_ROOT, SCENE_ASSETS_DIR_NAME
+from ...cli.tshub import (
     PROBE_SCENE,
     blender_scene_scripts as get_blender_scripts,
     configure_tshub_import,

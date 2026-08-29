@@ -43,7 +43,7 @@ def write_episode(
 ) -> Path:
     """Close the frame exporter and write `episode.json` beside its images."""
     from ...collect.episode_schema import Episode, EpisodeStatic
-    from ...utils.paths import PROJECT_ROOT
+    from ...paths import PROJECT_ROOT
     from ..sumo import mask_dir_of
 
     # close() returns the manifest *path*; the frame list lives inside it.

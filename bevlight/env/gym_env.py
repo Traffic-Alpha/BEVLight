@@ -145,7 +145,7 @@ class JunctionEnv:
 
     def _open(self):
         from ..eval.metrics import EpisodeMetrics
-        from ..utils.paths import LOG_ROOT
+        from ..paths import LOG_ROOT
         from tshub.utils.init_log import set_logger
 
         set_logger(str(LOG_ROOT / self.junction), terminal_log_level=self.log_level)

@@ -19,7 +19,7 @@ from __future__ import annotations
 import importlib.util
 from types import ModuleType
 
-from ..utils.paths import SCENARIOS_ROOT
+from ..paths import SCENARIOS_ROOT
 
 AVAILABLE_JUNCTIONS = sorted(
     path.name

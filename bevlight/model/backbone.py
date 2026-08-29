@@ -88,7 +88,7 @@ class DinoBackbone(nn.Module):
                 )
             self.weights_source = str(weights_path)
         else:
-            from ..utils.paths import HF_CACHE_ROOT
+            from ..paths import HF_CACHE_ROOT
 
             HF_CACHE_ROOT.mkdir(parents=True, exist_ok=True)
             with _usable_proxy_env():

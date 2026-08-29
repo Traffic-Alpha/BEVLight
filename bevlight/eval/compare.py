@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 from ..scenario.selection import SPLITS, load_selection
-from ..utils.paths import REPORTS_ROOT
+from ..paths import REPORTS_ROOT
 
 # Metrics worth showing side by side, and which direction is better.
 REPORT = [

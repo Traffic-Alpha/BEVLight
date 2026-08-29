@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...utils.paths import BACKBONE_ROOT
+from ...paths import BACKBONE_ROOT
 
 # The DINOv2 variants worth having. ViT-S is the pilot default; ViT-B is the
 # upgrade path if per-lane features turn out to be the bottleneck.

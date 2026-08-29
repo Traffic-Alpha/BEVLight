@@ -6,6 +6,50 @@ once, so the control policy reads pixels instead of loop detectors — and it ha
 to keep working at a junction it has never seen, under a signal plan it has
 never seen, from a heading it has never seen.
 
+## Quickstart
+
+Ten seconds from a fresh clone to a real number. Nothing below renders, trains,
+or touches a GPU.
+
+```bash
+conda activate tshub                        # SUMO lives here, and sets SUMO_HOME
+pip install -e '.[vision,scenario,dev]'
+
+pytest                                      # 452 pass; what skips says what is missing
+bevlight --help                             # the whole pipeline, in the order it runs
+
+bevlight eval compare --junction Beijing_Beihuan --demand low_density --steps 300
+```
+
+The last command runs two SUMO episodes -- fixed-time and max-pressure over the
+same junction, plan, demand and seed -- and prints what separates them:
+
+```text
+scenario                             split  controller           travel     wait    queue     done    stuck
+Beijing_Beihuan/normal_low_density   train  fixed_time             33.8      6.8      1.6     56.0     11.0
+Beijing_Beihuan/normal_low_density   train  max_pressure           29.1      2.1      0.4     58.0      9.0
+
+=== improvement over fixed_time (negative = better for travel/wait/queue) ===
+Beijing_Beihuan/normal_low_density   max_pressure          -13.8%    -69.3%    -74.4%      3.6%
+```
+
+That is the baseline every learned policy in this repository is measured
+against, and it is the shape every later stage reports in. Drop `--junction` and
+`--demand` to run the whole training split instead.
+
+**What is and is not in the clone.** The per-junction files the code reads --
+networks, routes, lane masks, `*.sumocfg` -- are here, 6.4MB of them, which is
+why the command above works and why `pytest` has something to test. The inputs
+they were built from are not: 296MB of GeoTIFF, 146MB of 3D assets, the rendered
+frames. So `scenario build-networks` and everything downstream of a render needs
+data you would have to obtain separately; everything that reads the built
+artefacts works out of the box.
+
+**Reading order.** `bevlight --help` lists the packages in pipeline order, and
+each is one hop: `scenario` -> `collect` -> `data` -> `model` -> `train` ->
+`eval`, with `env` underneath them all and `rl` beside. Start at the package
+whose command you just ran.
+
 ## Layout
 
 ```text

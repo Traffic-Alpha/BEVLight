@@ -181,20 +181,64 @@ def comparability(policy: dict, references: dict, tolerance: float = THROUGHPUT_
     return bool(shortfall < tolerance), round(shortfall, 4)
 
 
-def progress_callback(run_dir, every: int = 5000, started: float | None = None):
-    """Record what the run is doing, in the shape the SAC arm already records it.
+def reward_reference(reward: str, path: Path | None = None) -> dict[str, float]:
+    """max_pressure's mean per-decision cost per scenario, as a normaliser.
+
+    Written by `scripts`-side measurement into `runs/reports/reward_reference.json`.
+    Returns an empty mapping when it has not been measured, and the caller then
+    reports raw returns and says so rather than inventing a scale.
+    """
+    import json
+
+    from ..paths import REPORTS_ROOT
+
+    path = Path(path or REPORTS_ROOT / "reward_reference.json")
+    if not path.is_file():
+        return {}
+    table = json.loads(path.read_text())
+    return {
+        key: entry["per_decision"][reward]
+        for key, entry in table.items()
+        if reward in entry.get("per_decision", {})
+    }
+
+
+def normalised_return(episodes, reference: dict[str, float]) -> float | None:
+    """Episode returns expressed as a multiple of max-pressure's, then averaged.
+
+    A pooled mean over mixed scenarios measures the mix, not the policy: the
+    per-decision cost of max-pressure itself spans 15x across the training
+    split, from -0.06 at a quiet junction to -0.97 at a congested one, so a
+    curve built from raw returns moves with which scenarios happened to finish
+    recently.
+
+    Dividing by `reference * length` puts every episode on one axis where 1.0
+    is max-pressure's own performance on that same scenario, above 1.0 is
+    better, and the number means the same thing wherever it was measured.
+    """
+    ratios = []
+    for episode in episodes:
+        key, length = episode.get("scenario"), episode.get("l", 0)
+        expected = reference.get(key)
+        if expected is None or not length or abs(expected) < 1e-9:
+            continue
+        ratios.append(episode["r"] / (expected * length))
+    return round(sum(ratios) / len(ratios), 4) if ratios else None
+
+
+def progress_callback(run_dir, every: int = 5000, started: float | None = None,
+                      reward: str = "visible_queue"):
+    """Record what the run is doing, in the shape the results pipeline reads.
 
     A training run that prints nothing cannot be told from a hung one, and a
     reward curve is the first thing anyone asks for. SB3 is silent at
-    `verbose=0` and writes no history of its own, so this keeps the same columns
-    `runs/train/<sac run>/history.json` carries -- steps, episodes, return,
-    elapsed -- and for the same reason: the two arms are meant to be read on one
-    pair of axes, and a different schema would mean transposing them by hand
-    every time.
+    `verbose=0` and writes no history of its own.
 
-    `return` is the mean over the episodes SB3 has in its info buffer, which
-    needs the environments to be Monitor-wrapped; without that it reports None
-    rather than a plausible-looking zero.
+    Two numbers go in, not one. `return` is the raw pooled mean, which is what
+    SB3 would show and is not comparable across scenarios. `return_vs_max_pressure`
+    is the same episodes normalised by what max-pressure scores on each of them,
+    where 1.0 is parity -- that is the one worth watching, and it is None until
+    the reference table has been measured.
     """
     import json
     import time
@@ -203,6 +247,7 @@ def progress_callback(run_dir, every: int = 5000, started: float | None = None):
 
     started = started if started is not None else time.time()
     history_path = Path(run_dir) / "history.json"
+    reference = reward_reference(reward)
 
     class Progress(BaseCallback):
         def __init__(self):
@@ -219,8 +264,11 @@ def progress_callback(run_dir, every: int = 5000, started: float | None = None):
             entry = {
                 "steps": int(self.num_timesteps),
                 "episodes": len(episodes),
+                "scenarios_seen": len({e.get("scenario") for e in episodes
+                                       if e.get("scenario")}),
                 "return": (round(sum(e["r"] for e in episodes) / len(episodes), 4)
                            if episodes else None),
+                "return_vs_max_pressure": normalised_return(episodes, reference),
                 "episode_length": (round(sum(e["l"] for e in episodes) / len(episodes), 1)
                                    if episodes else None),
                 "elapsed_s": round(elapsed, 1),
@@ -228,10 +276,13 @@ def progress_callback(run_dir, every: int = 5000, started: float | None = None):
             }
             self.history.append(entry)
             history_path.write_text(json.dumps(self.history, indent=2))
-            shown = "n/a" if entry["return"] is None else f"{entry['return']:+.3f}"
+            ratio = entry["return_vs_max_pressure"]
+            shown = "n/a" if ratio is None else f"{ratio:.3f}x mp"
+            raw = "n/a" if entry["return"] is None else f"{entry['return']:+.2f}"
             print(f"[train] {entry['steps']:>7} steps  {entry['episodes']:>4} eps  "
-                  f"return {shown}  {entry['steps_per_s']:.1f}/s  "
-                  f"{entry['elapsed_s'] / 60:.1f} min", flush=True)
+                  f"{entry['scenarios_seen']:>2} scen  raw {raw:>9}  {shown:>10}  "
+                  f"{entry['steps_per_s']:.1f}/s  {entry['elapsed_s'] / 60:.1f} min",
+                  flush=True)
             return True
 
     return Progress()
@@ -246,19 +297,20 @@ def controller_rollout(spec: str, junction: str, plan: str, demand: str,
     of it is scored against the same `max_pressure` and `fixed_time` on the same
     scenarios and seeds. Recomputing those is the largest single waste in the
     experiment: twelve cells over ninety-one scenarios is two thousand baseline
-    episodes where a hundred and eighty distinct ones exist.
+    episodes where a hundred and eighty distinct ones exist. The controller
+    itself is arithmetic; the ten to fifteen seconds is SUMO, whoever is driving.
 
-    The reward is deliberately not part of the key, which is worth stating
-    because it looks like an omission. A rule-based controller does not read the
-    reward, `summary()` does not report it, and the traffic is seeded -- so the
-    episode and every metric taken from it are identical whichever reward the
+    The reward is deliberately not part of the key, which looks like an omission
+    and is a decision. A rule-based controller does not read the reward,
+    `summary()` does not report it, and the traffic is seeded -- so the episode
+    and every metric taken from it are identical whichever reward the
     environment was constructed with. Only the scalar the environment hands back
     differs, and this discards it.
     """
     import json
 
     from ..paths import REPORTS_ROOT
-    from ._internal.rollout import rollout_controller
+    from ._internal import rollout as rollout_module
 
     cache_dir = Path(cache_dir or REPORTS_ROOT / "controller_cache")
     key = f"{spec}__{junction}__{plan}__{demand}__seed{seed}__steps{steps}"
@@ -268,8 +320,9 @@ def controller_rollout(spec: str, junction: str, plan: str, demand: str,
 
     # `reward` reaches the environment but never the result; any registered name
     # would produce this same summary.
-    summary = rollout_controller(spec, junction, plan, demand, seed,
-                                 "visible_queue", steps)
+    summary = rollout_module.rollout_controller(
+        spec, junction, plan, demand, seed, "visible_queue", steps
+    )
     cache_dir.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(summary, indent=2))
     return summary

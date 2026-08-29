@@ -75,10 +75,15 @@ def mean(values) -> float:
     return float(sum(values) / len(values)) if values else 0.0
 
 
-#: What a row reports. `avg_travel_time_incl_unfinished_s` leads because average
-#: travel time over *completed* trips is the one metric a degenerate policy can
-#: win: hold one phase and the approach it serves gets a clear road while the
-#: other three never finish and so never enter the average.
+#: What the printed table shows. `avg_travel_time_incl_unfinished_s` leads
+#: because average travel time over *completed* trips is the one metric a
+#: degenerate policy can win: hold one phase and the approach it serves gets a
+#: clear road while the other three never finish and so never enter the average.
+#:
+#: This is the display set, not the record. Every row keeps the whole of
+#: `summary()` -- `queue_saturated_lane_seconds` says where the BEV window
+#: actually bit, `phase_counts` says whether a policy is cycling or camping, and
+#: neither can be recovered once dropped.
 METRICS = ("avg_travel_time_incl_unfinished_s", "avg_travel_time_s",
            "avg_waiting_time_s", "avg_queue_veh", "throughput", "unfinished",
            "switch_rate")
@@ -116,13 +121,13 @@ def score(model, algorithm, scenarios, args) -> dict:
                 "scenario": scenario.key, "junction": scenario.junction,
                 "plan": scenario.plan, "demand": scenario.demand,
                 "split": scenario.split, "seed": seed,
-                "policy": {k: policy[k] for k in METRICS},
+                "policy": policy,
             }
             for spec in args.baseline:
                 reference = controller_rollout(spec, scenario.junction,
                                                scenario.plan, scenario.demand,
                                                seed, args.episode_steps)
-                entry[spec] = {k: reference[k] for k in METRICS}
+                entry[spec] = reference
                 entry[f"delta_{spec}"] = round(
                     policy["avg_travel_time_incl_unfinished_s"]
                     - reference["avg_travel_time_incl_unfinished_s"], 3
@@ -133,7 +138,8 @@ def score(model, algorithm, scenarios, args) -> dict:
                               for spec in args.baseline), flush=True)
 
     summary = {"scenarios": len(scenarios), "episodes": len(rows), "rows": rows,
-               "policy": {k: mean([r["policy"][k] for r in rows]) for k in METRICS}}
+               "policy": {k: mean([r["policy"][k] for r in rows])
+                          for k in METRICS}}
     for spec in args.baseline:
         deltas = [r[f"delta_{spec}"] for r in rows]
         summary[spec] = {k: mean([r[spec][k] for r in rows]) for k in METRICS} | {
@@ -219,7 +225,8 @@ def main(argv=None) -> int:
     try:
         model = build(algorithm, envs, seed=args.seed)
         model.learn(total_timesteps=args.steps, progress_bar=False,
-                    callback=progress_callback(run_dir, args.log_every, started))
+                    callback=progress_callback(run_dir, args.log_every, started,
+                                              args.reward))
         model.save(run_dir / "model")
     finally:
         envs.close()

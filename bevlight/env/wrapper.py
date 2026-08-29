@@ -148,8 +148,10 @@ class JunctionGymEnv:
         packed, info = self._pack(observation, info)
         if done:
             info["episode_summary"] = self.inner.summary()
-            info["scenario"] = (f"{self.inner.junction}/{self.inner.plan}_"
-                                f"{self.inner.demand}")
+            # `Scenario.key`'s spelling, so an episode record joins the
+            # reference table without a translation step in between.
+            info["scenario"] = (f"{self.inner.junction}__{self.inner.plan}"
+                                f"__{self.inner.demand}")
         return packed, reward, done, done, info
 
     def action_masks(self) -> np.ndarray:
@@ -192,7 +194,12 @@ def make_env(rank: int = 0, monitor_dir: str | None = None, **kwargs):
         if monitor_dir:
             from stable_baselines3.common.monitor import Monitor
 
-            return Monitor(env, filename=f"{monitor_dir}/{rank}")
+            # `scenario` travels with the episode record. A worker rotates
+            # through scenarios whose reward scales differ by an order of
+            # magnitude, so an episode return means nothing until it is known
+            # which scenario produced it.
+            return Monitor(env, filename=f"{monitor_dir}/{rank}",
+                           info_keywords=("scenario",))
         return env
 
     return _init

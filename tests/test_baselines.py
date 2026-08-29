@@ -180,3 +180,46 @@ def test_a_different_seed_is_a_different_episode(tmp_path, monkeypatch):
     controller_rollout("max_pressure", "J", "normal", "high", 7, cache_dir=tmp_path)
     controller_rollout("max_pressure", "J", "normal", "high", 8, cache_dir=tmp_path)
     assert len(calls) == 2
+
+
+def test_a_pooled_return_is_replaced_by_one_that_means_the_same_everywhere():
+    """max-pressure's own cost spans 15x across the training split.
+
+    Measured: -0.0640 per decision at Beijing_Beihuan/normal/low_density,
+    -0.9692 at Beijing_Beishahe/easy/high_density. An episode return of -6 and
+    one of -97 can be the same policy doing equally well, so a curve built from
+    the pooled mean moves with which scenarios finished recently rather than
+    with the policy.
+    """
+    from bevlight.rl.baselines import normalised_return
+
+    reference = {"quiet": -0.064, "busy": -0.969}
+    matching = [{"scenario": "quiet", "r": -6.4, "l": 100},
+                {"scenario": "busy", "r": -96.9, "l": 100}]
+    assert normalised_return(matching, reference) == pytest.approx(1.0, abs=1e-3)
+
+    # The raw mean of those two is -51.65, a number about neither scenario.
+    better = [{"scenario": "busy", "r": -48.45, "l": 100}]
+    assert normalised_return(better, reference) == pytest.approx(0.5, abs=1e-3)
+
+
+def test_an_episode_from_an_unmeasured_scenario_is_left_out_rather_than_guessed():
+    from bevlight.rl.baselines import normalised_return
+
+    reference = {"quiet": -0.064}
+    episodes = [{"scenario": "quiet", "r": -6.4, "l": 100},
+                {"scenario": "unmeasured", "r": -900.0, "l": 100}]
+    assert normalised_return(episodes, reference) == pytest.approx(1.0, abs=1e-3)
+
+
+def test_without_a_reference_table_no_ratio_is_invented():
+    from bevlight.rl.baselines import normalised_return
+
+    assert normalised_return([{"scenario": "quiet", "r": -6.4, "l": 100}], {}) is None
+
+
+def test_the_reference_table_is_optional(tmp_path):
+    """A run on a machine that has not measured one still trains and still logs."""
+    from bevlight.rl.baselines import reward_reference
+
+    assert reward_reference("visible_queue", tmp_path / "absent.json") == {}

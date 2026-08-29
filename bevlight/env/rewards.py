@@ -141,6 +141,19 @@ def pressure(ctx: RewardContext) -> float:
     incoming lanes, so what it is "releasing" measures how long it has been on
     rather than how much traffic is waiting.
 
+    **Within the BEV window this is largely `visible_queue` again**, which is
+    measured rather than suspected: over the 91 active scenarios it is equal to
+    it to six decimal places at more than half of them, and a fixed per-junction
+    fraction of it at the rest. Two things collapse it. The downstream term is
+    structurally zero -- vehicles leaving a junction accelerate away, so an
+    outgoing lane does not queue inside sixty metres -- and where a movement
+    owns a single incoming lane, the sum of per-movement means is the sum of
+    per-lane queues exactly.
+
+    It is kept anyway, and the collapse is the reason: the signal max-pressure
+    is named for, room downstream, is not observable at this range. A row that
+    duplicates `visible_queue` is what that fact looks like in a results table.
+
     Divided by the incoming-lane count, like every other cost here, so junctions
     of different sizes produce gradients of one scale.
     """

@@ -1,9 +1,9 @@
 '''Who may import whom. The rule the directory layout encodes, enforced.
 
 Every subpackage is three tiers -- the public surface at its top level,
-`_internal/` for what only it uses, `cli/` for what only a `tools/` command
-uses. That split records a measured fact: which modules actually have callers
-outside their own package. Documentation of such a fact rots; this does not.
+`_internal/` for what only it uses, `cli/` for the commands it exposes. That
+split records a measured fact: which modules actually have callers outside
+their own package. Documentation of such a fact rots; this does not.
 
 Imports are read with `ast` rather than by importing anything, so the check
 costs milliseconds and needs neither torch nor SUMO.
@@ -113,24 +113,35 @@ def test_no_subpackage_reaches_into_another_subpackages_internals():
     assert not breaks, "layering breaks:\n  " + "\n  ".join(breaks)
 
 
-def test_tools_use_cli_backends_and_never_package_internals():
-    """`tools/` is the intended caller of `cli/`, and of nothing private."""
-    breaks = []
-    for path in python_files(REPO / "tools"):
-        for line, target in imports_of(path):
-            if target in ALL_MODULES and tier(target) == "_internal":
-                breaks.append(f"{path.relative_to(REPO)}:{line} -> {target}")
-    assert not breaks, "tools/ reaching into _internal/:\n  " + "\n  ".join(breaks)
+def test_nothing_imports_the_front_door():
+    """The dispatcher depends on the packages. Nothing may depend on it back.
+
+    `bevlight/cli/dispatch.py` resolves a command name to an import path at run
+    time, so a package that imported it would close a loop the import graph does
+    not otherwise have -- and would make `--help` cost whatever that package
+    costs. Its two neighbours, `cli/tshub.py` and `cli/viz.py`, are ordinary
+    shared modules and are not covered by this.
+    """
+    allowed = {"bevlight.cli", "bevlight.cli.dispatch"}
+    breaks = [
+        f"{path.relative_to(REPO)}:{line}"
+        for path in python_files(REPO / "bevlight") + python_files(REPO / "tests")
+        if module_name(path) not in allowed
+        for line, target in imports_of(path)
+        if target.startswith("bevlight.cli.dispatch")
+        and not module_name(path).startswith("tests.")
+    ]
+    assert not breaks, "importing the dispatcher:\n  " + "\n  ".join(breaks)
 
 
-def external_users() -> dict[str, set[str]]:
-    """For each module, which places outside its own subpackage import it."""
+def callers() -> dict[str, set[str]]:
+    """For each module, which other modules import it."""
     users: dict[str, set[str]] = {m: set() for m in ALL_MODULES}
-    for root in ("bevlight", "tools", "tests"):
+    for root in ("bevlight", "tests"):
         for path in python_files(REPO / root):
-            here = subpackage(module_name(path)) if root == "bevlight" else root
+            here = module_name(path)
             for _, target in imports_of(path):
-                if target in users and subpackage(target) != here:
+                if target in users and target != here:
                     users[target].add(here)
     return users
 
@@ -146,15 +157,17 @@ def reexported(pkg: str) -> set[str]:
 @pytest.mark.parametrize("pkg", sorted(
     p.name for p in PACKAGE.iterdir() if (p / "__init__.py").is_file()
 ))
-def test_public_modules_still_have_outside_callers(pkg):
-    """A top-level module claims to be other people's business. Check it is.
+def test_no_module_is_left_with_nobody_calling_it(pkg):
+    """A module nothing imports is dead weight, and reads as live code.
 
-    This is the drift check in the other direction: a module whose last outside
-    caller went away is now internal in fact while still sitting in public
-    space, and the next reader has no way to tell. Either it moves into
-    `_internal/`, or `__init__` exports it as the package's surface.
+    This used to demand a caller *outside* the package, which made sense while
+    every command lived in `tools/` and therefore outside. Now that a command is
+    `<pkg>/cli/<name>.py`, a module whose only caller is its own package's
+    command is doing exactly what it should -- `rl/preflight.py` backs
+    `bevlight rl preflight` and nothing else, and that is not a defect. So the
+    check is the weaker, still-useful one: somebody has to call it.
     """
-    users = external_users()
+    users = callers()
     exported = reexported(pkg)
     stranded = []
     for path in sorted((PACKAGE / pkg).glob("*.py")):
@@ -162,9 +175,9 @@ def test_public_modules_still_have_outside_callers(pkg):
         if path.name == "__init__.py" or name in exported:
             continue
         if not users.get(name):
-            stranded.append(f"{path.relative_to(REPO)} has no caller outside {pkg}/")
+            stranded.append(f"{path.relative_to(REPO)} is imported by nothing")
     assert not stranded, (
-        "move these into _internal/, or export them from __init__:\n  "
+        "delete these, or export them from __init__ if they are the surface:\n  "
         + "\n  ".join(stranded)
     )
 

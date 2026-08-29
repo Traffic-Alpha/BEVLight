@@ -257,7 +257,7 @@ def load_lane_mask(
     if not meta_path.exists():
         raise FileNotFoundError(
             f"No lane mask for '{junction}'. Build it with "
-            f"`conda run -n tshub python tools/build_lane_masks.py --junction {junction}`."
+            f"`conda run -n tshub bevlight scenario build-lane-masks --junction {junction}`."
         )
     meta = json.loads(meta_path.read_text())
 

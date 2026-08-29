@@ -471,7 +471,7 @@ def build_one_plan(
                         target.unlink(missing_ok=True)
                         print(f"        overlay [{short}] skipped: no {variant} frame "
                               f"at {resolution[0]}x{resolution[1]} "
-                              f"(run tools/render_bev_reference.py --junction {junction})")
+                              f"(run bevlight scenario render-reference --junction {junction})")
                         continue
                     # Combined, then each role alone. Outgoing lanes decide
                     # whether a movement's exit is blocked, and painted together

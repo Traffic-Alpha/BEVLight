@@ -95,7 +95,7 @@ class DinoBackbone(nn.Module):
                 self.model = timm.create_model(
                     model_name, pretrained=True, cache_dir=str(HF_CACHE_ROOT), **options
                 )
-            self.weights_source = "downloaded (run tools/download_backbone.py to pin it)"
+            self.weights_source = "downloaded (run bevlight model download to pin it)"
         self.model.eval()
         for parameter in self.model.parameters():
             parameter.requires_grad = False

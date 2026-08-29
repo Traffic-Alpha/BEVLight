@@ -235,3 +235,7 @@ def main(argv=None) -> int:
     out.write_text(json.dumps(result, indent=2))
     print(f"\n[summary] -> {out}")
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

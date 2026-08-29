@@ -19,13 +19,13 @@ Outputs:
 
 Examples:
   # All junctions, using the best available BEV render of each.
-  conda run -n tshub python tools/export_lane_views.py
+  conda run -n tshub bevlight scenario export-lane-views
 
   # One junction, keep the surroundings dimmed instead of black.
-  conda run -n tshub python tools/export_lane_views.py --junction Beijing_Beihuan --background dim
+  conda run -n tshub bevlight scenario export-lane-views --junction Beijing_Beihuan --background dim
 
   # Crop each lane view to the lane itself.
-  conda run -n tshub python tools/export_lane_views.py --junction Beijing_Beihuan --crop
+  conda run -n tshub bevlight scenario export-lane-views --junction Beijing_Beihuan --crop
 @LastEditTime: 2026-08-20
 @LastEditors: WANG Maonan
 '''
@@ -42,6 +42,7 @@ from pathlib import Path
 from ...paths import (
     EPISODES_ROOT,
     LANE_VIEWS_ROOT,
+    PROJECT_ROOT,
 )
 
 SOURCE_ORDER = ("blender", "panda")
@@ -128,7 +129,7 @@ def export_one_junction(
             raise FileNotFoundError(
                 f"{junction}: no junction BEV render found under "
                 f"{EPISODES_ROOT}/<episode>/images/(blender_day|panda_day)/rgb. "
-                "Run `conda run -n tshub python tools/collect_episodes.py --junction ...` first."
+                "Run `conda run -n tshub bevlight collect episodes --junction ...` first."
             )
         if frame_index >= len(frames):
             raise IndexError(
@@ -238,7 +239,7 @@ def main() -> int:
         if not plans:
             raise FileNotFoundError(
                 f"{junction}: no lane mask built yet. "
-                f"Run `conda run -n tshub python tools/build_lane_masks.py --junction {junction}`."
+                f"Run `conda run -n tshub bevlight scenario build-lane-masks --junction {junction}`."
             )
         if args.plan:
             if args.plan not in plans:

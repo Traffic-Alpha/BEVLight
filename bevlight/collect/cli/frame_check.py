@@ -152,3 +152,7 @@ def main(argv: list[str] | None = None) -> int:
     if sheet:
         print(f"[summary] contact sheet -> {sheet}")
     return 0 if written else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

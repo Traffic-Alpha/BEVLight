@@ -9,7 +9,7 @@ Public -- other subpackages read these:
     episode_schema   the trajectory file format and its version
     frame_selection  which simulated seconds are worth a Blender render
 
-cli/ -- one tools/ command each, imported by nothing else:
+cli/ -- one `bevlight collect ...` command each, imported by nothing else:
     collect          run and record episodes over a scenario selection
     blender          render selected frames offline with Cycles
     calibrate_demand pick a demand that lands queues in the observable band

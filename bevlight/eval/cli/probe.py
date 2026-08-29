@@ -52,7 +52,7 @@ def load_cache(dataset_name: str) -> dict:
     path = SAMPLES_ROOT / dataset_name / "lane_features.npz"
     if not path.is_file():
         raise SystemExit(
-            f"No feature cache at {path}. Build one with tools/build_dataset.py."
+            f"No feature cache at {path}. Build one with bevlight data build."
         )
     with np.load(path, allow_pickle=False) as data:
         return {key: data[key] for key in data.files}

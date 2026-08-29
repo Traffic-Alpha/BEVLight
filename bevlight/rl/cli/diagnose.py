@@ -217,3 +217,7 @@ def main(argv=None) -> int:
         compare({name: TRAIN_RUNS_ROOT / name
                  for name in [args.run, *args.against]})
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

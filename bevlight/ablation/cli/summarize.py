@@ -66,7 +66,7 @@ def compare(runs: dict[str, Path], split: str, policy: str | None,
     if not base:
         raise SystemExit(
             f"reference run '{reference}' has no closed-loop results for split "
-            f"'{split}'. Run tools/eval_closed_loop.py on it first."
+            f"'{split}'. Run bevlight eval closed-loop on it first."
         )
 
     for label, entry in loaded.items():

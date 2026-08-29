@@ -8,9 +8,9 @@ Default mode is poly-only: it regenerates
 existing SUMO network. It does not touch `networks/*.net.xml`.
 
 Examples:
-  conda run -n tshub python tools/build_networks.py
-  conda run -n tshub python tools/build_networks.py --junction Beijing_Pinganli
-  conda run -n tshub python tools/build_networks.py --dry-run
+  conda run -n tshub bevlight scenario build-networks
+  conda run -n tshub bevlight scenario build-networks --junction Beijing_Pinganli
+  conda run -n tshub bevlight scenario build-networks --dry-run
 @LastEditTime: 2026-08-19
 @LastEditors: WANG Maonan
 '''

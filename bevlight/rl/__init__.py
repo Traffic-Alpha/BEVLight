@@ -14,6 +14,8 @@ Public -- other subpackages read these:
 cli/:
     deviation   does deviating from max-pressure at any single decision help
     diagnose    read a teacher run back: entropy, Q spread, evaluation curve
+    preflight   the command over `preflight`
+    sac         the command over `sac`
 
 The gymnasium face of the world is re-exported here rather than in `env`,
 because this is the layer that has a use for it: `JunctionGymEnv` and

@@ -4,7 +4,7 @@
 @Description: Offline Blender rendering from collected BEVLight episodes.
 
 This script does not run SUMO. It consumes the selected Blender manifests written
-by `tools/collect_episodes.py`:
+by `bevlight collect episodes`:
 
   data/episodes/<key>/blender_selected.json
 
@@ -17,7 +17,7 @@ The first render pass keeps TSHub's native camera-oriented directory shape:
 
   data/episodes/<key>/images/blender_<style>/<element>/<sensor>_<pass>/
 
-Run `tools/flatten_blender_images.py` afterwards to move that into:
+Run `bevlight collect flatten` afterwards to move that into:
 
   data/episodes/<key>/images/blender_<style>/<pass>/
 

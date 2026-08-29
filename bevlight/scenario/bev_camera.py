@@ -66,7 +66,7 @@ BEV_HEIGHT_MARGIN_M = 60.0
 
 
 def load_camera_table(path=None) -> dict:
-    """Solved per-junction windows, or {} before `tools/build_lane_masks.py` runs."""
+    """Solved per-junction windows, or {} before `bevlight scenario build-lane-masks` runs."""
     table_path = BEV_CAMERA_TABLE if path is None else path
     if not table_path.is_file():
         return {}

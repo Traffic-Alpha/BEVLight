@@ -21,15 +21,18 @@ bevlight/          the library; one subpackage per hop of the pipeline
   eval/            offline checkpoint scoring, then closed-loop control metrics
   rl/              a different learner on the same world: discrete SAC, reward preflight
   ablation/        the named ablation table and what each row is evidence for
-  utils/           paths, TransSimHub/Blender discovery, mask painting
-
-tools/             thin CLIs over the above; no logic lives here
+  cli/             the front door: `bevlight <group> <command>`, plus what more
+                   than one package's commands share (TransSimHub discovery,
+                   mask painting)
+  paths.py         every on-disk location, in one place; the only module in the
+                   tree that counts `parents[n]`
 scenarios/         data only: 12 junctions x (networks, routes, add, 3d_assets, lane_mask)
 configs/           tracked inputs the code reads: scenario_selection.json, bev_cameras.json
 assets/            tracked documentation images, including roadnet previews
 data/              generated (gitignored): episodes/, samples/, bev_reference/
 runs/              generated (gitignored): backbones/, train/<run>/, reports/
-tests/             mask alignment, padding invariance, label consistency, layering
+tests/             mask alignment, padding invariance, label consistency,
+                   layering, and the command <-> module mapping
 ```
 
 Two generated roots rather than one, because they are not equally expensive to
@@ -38,9 +41,19 @@ is always safe; deleting `data/` costs a week.
 
 Inside each subpackage the layout says who may import what. A module at the top
 level is other subpackages' business; `_internal/` is that package's alone; and
-`cli/` exists to back one `tools/` command. `tests/test_layering.py` fails on a
-cross-package import that reaches into either, so the split records a measured
-fact rather than an intention.
+`cli/` holds its commands. `tests/test_layering.py` fails on a cross-package
+import that reaches into either, so the split records a measured fact rather
+than an intention.
+
+Every command is reached two ways, and they are the same thing:
+
+```bash
+bevlight eval offline --run baseline
+python -m bevlight.eval.cli.offline --run baseline
+```
+
+The first is for typing; the second is what pdb, cProfile and an IDE launch
+config want. `tests/test_cli_mapping.py` fails if the two stop lining up.
 
 `scenarios/` holds only per-junction data and the two scripts that generated it
 (`config.py`, `generate_routes.py` -- one hand-calibrated pair per junction, kept
@@ -57,10 +70,22 @@ gitignored `data/` and `runs/`.
 TransSimHub is used from a sibling checkout rather than PyPI. Point `TSHUB_ROOT`
 at it (or pass `--tshub-root`); `BLENDER` locates the Blender executable. The
 SUMO environment comes from the `tshub` conda env, so commands run as
-`conda run -n tshub python ...`.
+`conda run -n tshub bevlight ...`.
 
 ```bash
-pip install -e .          # optional; tools/ scripts work without it
+pip install -e .                 # installs the `bevlight` command
+pip install -e '.[vision,scenario,rl,dev]'   # everything the extras cover
+```
+
+Install the CUDA build of torch that matches the machine first; pip leaves an
+existing torch alone. Only `numpy` and `torch` are hard dependencies, because
+they are the only things imported at module top level -- `cv2`, `timm`,
+`shapely`, `gymnasium` and `stable-baselines3` are imported inside the functions
+that need them, which is what lets the layering test run without torch or SUMO.
+
+```bash
+bevlight --help                  # every command, in pipeline order
+bevlight scenario --help         # one group
 ```
 
 ## Scenarios
@@ -83,36 +108,36 @@ previous one wrote.
 
 ```bash
 # One-off per junction: networks, 3D assets, lane masks.
-conda run -n tshub python tools/build_networks.py
-conda run -n tshub python tools/build_static_scenes.py
-conda run -n tshub python tools/render_bev_reference.py
-conda run -n tshub python tools/build_lane_masks.py
+conda run -n tshub bevlight scenario build-networks
+conda run -n tshub bevlight scenario build-static-scenes
+conda run -n tshub bevlight scenario render-reference
+conda run -n tshub bevlight scenario build-lane-masks
 
 # Inspect what the model sees: one image per lane.
-conda run -n tshub python tools/export_lane_views.py --junction Beijing_Beihuan
+conda run -n tshub bevlight scenario export-lane-views --junction Beijing_Beihuan
 
 # Check the expert is worth imitating, then collect expert episodes.
 # Collection runs SUMO once, records actions/labels, and renders all Panda RGB/SEG frames.
-conda run -n tshub python tools/compare_experts.py --junction Beijing_Beihuan
-conda run -n tshub python tools/collect_episodes.py --junction Beijing_Beihuan
+conda run -n tshub bevlight eval compare --junction Beijing_Beihuan
+conda run -n tshub bevlight collect episodes --junction Beijing_Beihuan
 
 # Render selected Blender frames, then check the model can read them.
-conda run -n tshub python tools/download_backbone.py
-conda run -n tshub python tools/render_blender.py --episode-dir data/episodes/<key> --passes rgb
-conda run -n tshub python tools/flatten_blender_images.py --episode-dir data/episodes/<key> --passes rgb
-conda run -n tshub python tools/build_dataset.py --name pinganli_pilot --junction Beijing_Pinganli
-conda run -n tshub python tools/probe_queue.py --dataset pinganli_pilot
+conda run -n tshub bevlight model download
+conda run -n tshub bevlight collect blender --episode-dir data/episodes/<key> --passes rgb
+conda run -n tshub bevlight collect flatten --episode-dir data/episodes/<key> --passes rgb
+conda run -n tshub bevlight data build --name pinganli_pilot --junction Beijing_Pinganli
+conda run -n tshub bevlight eval probe --dataset pinganli_pilot
 
 # Behaviour-clone the expert on the cached features.
-conda run -n tshub python tools/train.py --dataset pinganli_pilot --run pinganli_bc
+conda run -n tshub bevlight train run --dataset pinganli_pilot --run pinganli_bc
 
 # Score the checkpoints offline (seconds), then rank the shortlist in closed loop.
-conda run -n tshub python tools/eval_offline.py --run pinganli_bc
-conda run -n tshub python tools/eval_closed_loop.py --run pinganli_bc --split train \
+conda run -n tshub bevlight eval offline --run pinganli_bc
+conda run -n tshub bevlight eval closed-loop --run pinganli_bc --split train \
     --junction Beijing_Pinganli --baseline fixed_time max_pressure
 
 # Check a demand lands queues in the observable band (the answer depends on the controller).
-conda run -n tshub python tools/calibrate_demand.py --junction Beijing_Pinganli \
+conda run -n tshub bevlight collect calibrate-demand --junction Beijing_Pinganli \
     --scale 1.0 1.2 --controller max_pressure fixed_time
 ```
 

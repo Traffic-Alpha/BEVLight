@@ -23,7 +23,8 @@ Two subpackages sit beside that line rather than on it:
     rl        a different learner on that world, above `env` and never below
               it -- nothing on the pipeline above imports `rl`
 
-`tools/` holds thin CLIs over these; `scenarios/` holds data only.
+`cli/` is the front door -- `bevlight <group> <command>`, where the group is one
+of these packages -- and `scenarios/` holds data only.
 
 ## Where a file sits says who may import it
 
@@ -33,12 +34,19 @@ Every subpackage is three tiers, so that reading a directory listing answers
     <pkg>/__init__.py     the public surface: re-exports, with __all__
     <pkg>/*.py            implementation other subpackages legitimately use
     <pkg>/_internal/*.py  only <pkg> itself may import these
-    <pkg>/cli/*.py        exists to back one tools/ command; only tools/ imports it
+    <pkg>/cli/*.py        one command each; nothing outside <pkg> imports these
 
 A cross-subpackage import that reaches into `_internal/` or `cli/` is a layering
-break, and `tests/test_layering.py` fails on it. `tools/` and `tests/` are the
-two exceptions -- they are the intended callers of `cli/`, and a test may reach
-anywhere it needs to.
+break, and `tests/test_layering.py` fails on it. `tests/` is the one exception:
+a test may reach anywhere it needs to.
+
+A command is reached two ways, and they are the same thing:
+
+    bevlight eval offline --run baseline
+    python -m bevlight.eval.cli.offline --run baseline
+
+The first is for typing and the second is for pdb, a profiler or an IDE launch
+config. `tests/test_cli_mapping.py` fails if the two stop lining up.
 
 The tiers are not a style preference. They record a fact that was measured:
 which modules actually have callers outside their own package. When that fact

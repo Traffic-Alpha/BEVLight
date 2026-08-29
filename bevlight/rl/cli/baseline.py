@@ -21,7 +21,14 @@ import time
 from ...env.rewards import REWARDS
 from ...paths import TRAIN_RUNS_ROOT
 from .._internal.rollout import rollout_controller
-from ..baselines import ALGORITHMS, build, comparability, resolve, rollout
+from ..baselines import (
+    ALGORITHMS,
+    build,
+    comparability,
+    progress_callback,
+    resolve,
+    rollout,
+)
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -43,6 +50,8 @@ def parse_args(argv=None) -> argparse.Namespace:
                         help="Simulated seconds per episode. Default: the scenario's own.")
     parser.add_argument("--num-envs", type=int, default=16)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--log-every", type=int, default=5000,
+                        help="Record a history entry every N decisions.")
     parser.add_argument("--eval-seeds", type=int, nargs="+", default=[7],
                         help="Seeds the trained policy and the baselines are both scored on.")
     parser.add_argument("--baseline", nargs="+", default=["max_pressure", "fixed_time"],
@@ -89,15 +98,21 @@ def main(argv=None) -> int:
 
     run_dir.mkdir(parents=True, exist_ok=True)
     scenario = locate(args.junction, args.plan, args.demand)
+    # Monitor-wrapped so SB3 fills `ep_info_buffer`; without it the callback has
+    # no episode returns to report and the run is a black box for an hour.
+    monitor_dir = run_dir / "monitor"
+    monitor_dir.mkdir(parents=True, exist_ok=True)
     envs = make_vec_env(
         [scenario], num_envs=args.num_envs, seed=args.seed,
+        monitor_dir=str(monitor_dir),
         render=False, allow_any_scenario=True, reward=args.reward,
         observe=args.observe, num_seconds=args.episode_steps,
     )
     started = time.time()
     try:
         model = build(algorithm, envs, seed=args.seed)
-        model.learn(total_timesteps=args.steps, progress_bar=False)
+        model.learn(total_timesteps=args.steps, progress_bar=False,
+                    callback=progress_callback(run_dir, args.log_every, started))
         model.save(run_dir / "model")
     finally:
         envs.close()

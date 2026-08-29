@@ -27,6 +27,7 @@ algorithm and how much is the action space.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -178,3 +179,59 @@ def comparability(policy: dict, references: dict, tolerance: float = THROUGHPUT_
         return True, 0.0
     shortfall = 1.0 - policy["throughput"] / best
     return bool(shortfall < tolerance), round(shortfall, 4)
+
+
+def progress_callback(run_dir, every: int = 5000, started: float | None = None):
+    """Record what the run is doing, in the shape the SAC arm already records it.
+
+    A training run that prints nothing cannot be told from a hung one, and a
+    reward curve is the first thing anyone asks for. SB3 is silent at
+    `verbose=0` and writes no history of its own, so this keeps the same columns
+    `runs/train/<sac run>/history.json` carries -- steps, episodes, return,
+    elapsed -- and for the same reason: the two arms are meant to be read on one
+    pair of axes, and a different schema would mean transposing them by hand
+    every time.
+
+    `return` is the mean over the episodes SB3 has in its info buffer, which
+    needs the environments to be Monitor-wrapped; without that it reports None
+    rather than a plausible-looking zero.
+    """
+    import json
+    import time
+
+    from stable_baselines3.common.callbacks import BaseCallback
+
+    started = started if started is not None else time.time()
+    history_path = Path(run_dir) / "history.json"
+
+    class Progress(BaseCallback):
+        def __init__(self):
+            super().__init__()
+            self.history: list[dict] = []
+            self.next_at = every
+
+        def _on_step(self) -> bool:
+            if self.num_timesteps < self.next_at:
+                return True
+            self.next_at += every
+            episodes = list(self.model.ep_info_buffer or [])
+            elapsed = time.time() - started
+            entry = {
+                "steps": int(self.num_timesteps),
+                "episodes": len(episodes),
+                "return": (round(sum(e["r"] for e in episodes) / len(episodes), 4)
+                           if episodes else None),
+                "episode_length": (round(sum(e["l"] for e in episodes) / len(episodes), 1)
+                                   if episodes else None),
+                "elapsed_s": round(elapsed, 1),
+                "steps_per_s": round(self.num_timesteps / max(1e-9, elapsed), 1),
+            }
+            self.history.append(entry)
+            history_path.write_text(json.dumps(self.history, indent=2))
+            shown = "n/a" if entry["return"] is None else f"{entry['return']:+.3f}"
+            print(f"[train] {entry['steps']:>7} steps  {entry['episodes']:>4} eps  "
+                  f"return {shown}  {entry['steps_per_s']:.1f}/s  "
+                  f"{entry['elapsed_s'] / 60:.1f} min", flush=True)
+            return True
+
+    return Progress()

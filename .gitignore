@@ -55,3 +55,7 @@ docs/
 
 # The paper is its own Overleaf-synced git repository; never nest it in this one.
 /overleaf_paper/
+
+# Agent instructions, local only. Points at docs/agents/*.md, which are
+# inside the gitignored internal docs repository.
+/CLAUDE.md

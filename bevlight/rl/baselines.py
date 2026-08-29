@@ -235,3 +235,41 @@ def progress_callback(run_dir, every: int = 5000, started: float | None = None):
             return True
 
     return Progress()
+
+
+def controller_rollout(spec: str, junction: str, plan: str, demand: str,
+                       seed: int, steps: int | None = None,
+                       cache_dir: Path | None = None) -> dict:
+    """One rule-based episode, remembered on disk.
+
+    The baseline table is a grid of algorithms against rewards, and every cell
+    of it is scored against the same `max_pressure` and `fixed_time` on the same
+    scenarios and seeds. Recomputing those is the largest single waste in the
+    experiment: twelve cells over ninety-one scenarios is two thousand baseline
+    episodes where a hundred and eighty distinct ones exist.
+
+    The reward is deliberately not part of the key, which is worth stating
+    because it looks like an omission. A rule-based controller does not read the
+    reward, `summary()` does not report it, and the traffic is seeded -- so the
+    episode and every metric taken from it are identical whichever reward the
+    environment was constructed with. Only the scalar the environment hands back
+    differs, and this discards it.
+    """
+    import json
+
+    from ..paths import REPORTS_ROOT
+    from ._internal.rollout import rollout_controller
+
+    cache_dir = Path(cache_dir or REPORTS_ROOT / "controller_cache")
+    key = f"{spec}__{junction}__{plan}__{demand}__seed{seed}__steps{steps}"
+    path = cache_dir / f"{key.replace('/', '_')}.json"
+    if path.is_file():
+        return json.loads(path.read_text())
+
+    # `reward` reaches the environment but never the result; any registered name
+    # would produce this same summary.
+    summary = rollout_controller(spec, junction, plan, demand, seed,
+                                 "visible_queue", steps)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(summary, indent=2))
+    return summary

@@ -115,3 +115,68 @@ def test_on_policy_baselines_are_not_touched():
     """PPO and A2C consume the whole rollout, so a wider vector is a wider batch."""
     for name in ("ppo", "a2c", "maskable_ppo"):
         assert "gradient_steps" not in built_kwargs(name, 16)
+
+
+def test_a_controller_episode_is_computed_once_and_remembered(tmp_path, monkeypatch):
+    """The largest waste in the grid is re-simulating the same baseline.
+
+    Twelve cells scored against the same two controllers over the same
+    scenarios is two thousand episodes where a hundred and eighty distinct ones
+    exist, and an episode is ten to fifteen seconds of SUMO whoever is driving.
+    """
+    import bevlight.rl._internal.rollout as rollout_module
+    from bevlight.rl.baselines import controller_rollout
+
+    calls = []
+
+    def fake(spec, junction, plan, demand, seed, reward, steps=None):
+        calls.append((spec, junction, plan, demand, seed, reward, steps))
+        return {"throughput": 307, "avg_travel_time_s": 29.25}
+
+    monkeypatch.setattr(rollout_module, "rollout_controller", fake)
+
+    first = controller_rollout("max_pressure", "J", "normal", "high", 7,
+                               cache_dir=tmp_path)
+    second = controller_rollout("max_pressure", "J", "normal", "high", 7,
+                                cache_dir=tmp_path)
+    assert first == second
+    assert len(calls) == 1, "the second call re-simulated instead of reading the cache"
+
+
+def test_the_reward_is_not_part_of_what_is_remembered(tmp_path, monkeypatch):
+    """It looks like an omission in the key, so it is pinned as a decision.
+
+    A rule-based controller never reads the reward, `summary()` never reports
+    it, and the traffic is seeded -- so the episode and every metric taken from
+    it are identical whichever reward the environment was built with. Only the
+    scalar the environment hands back differs, and the cache discards that.
+    """
+    import bevlight.rl._internal.rollout as rollout_module
+    from bevlight.rl.baselines import controller_rollout
+
+    rewards_seen = []
+
+    def fake(spec, junction, plan, demand, seed, reward, steps=None):
+        rewards_seen.append(reward)
+        return {"throughput": 307}
+
+    monkeypatch.setattr(rollout_module, "rollout_controller", fake)
+    controller_rollout("max_pressure", "J", "normal", "high", 7, cache_dir=tmp_path)
+    files = list(tmp_path.glob("*.json"))
+    assert len(files) == 1
+    assert "visible_queue" not in files[0].name
+    assert len(rewards_seen) == 1
+
+
+def test_a_different_seed_is_a_different_episode(tmp_path, monkeypatch):
+    import bevlight.rl._internal.rollout as rollout_module
+    from bevlight.rl.baselines import controller_rollout
+
+    calls = []
+    monkeypatch.setattr(
+        rollout_module, "rollout_controller",
+        lambda *a, **k: (calls.append(a), {"throughput": 1})[1],
+    )
+    controller_rollout("max_pressure", "J", "normal", "high", 7, cache_dir=tmp_path)
+    controller_rollout("max_pressure", "J", "normal", "high", 8, cache_dir=tmp_path)
+    assert len(calls) == 2

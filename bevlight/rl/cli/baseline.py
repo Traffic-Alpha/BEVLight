@@ -21,11 +21,11 @@ import time
 from ...env.rewards import REWARDS
 from ...paths import TRAIN_RUNS_ROOT
 from ...scenario.selection import SPLITS, load_selection
-from .._internal.rollout import rollout_controller
 from ..baselines import (
     ALGORITHMS,
     build,
     comparability,
+    controller_rollout,
     progress_callback,
     resolve,
     rollout,
@@ -84,39 +84,70 @@ METRICS = ("avg_travel_time_incl_unfinished_s", "avg_travel_time_s",
            "switch_rate")
 
 
-def score(model, algorithm, scenarios, args) -> dict:
-    """The policy and every rule-based baseline, over the same scenarios and seeds.
+def median(values) -> float:
+    ordered = sorted(values)
+    if not ordered:
+        return 0.0
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return float(ordered[middle])
+    return float((ordered[middle - 1] + ordered[middle]) / 2)
 
-    Paired: the difference is taken per (scenario, seed) before averaging,
-    because the traffic realisation is the largest source of variance here and
-    averaging the two arms separately would bury a real difference under it.
+
+def score(model, algorithm, scenarios, args) -> dict:
+    """Every scenario kept, and the split summarised from it.
+
+    The per-scenario rows are the record; the aggregate is a view of them. A
+    mean over a split hides the thing worth knowing -- which junction the policy
+    fails at, whether one scenario carries the whole difference, what the range
+    is -- and `9-results.md` reports medians and ranges over scenarios, which
+    cannot be recovered from a mean after the fact.
+
+    Paired per (scenario, seed): the traffic realisation is the largest source
+    of variance here, so the difference is taken before anything is averaged.
     """
-    pairs = [(s, seed) for s in scenarios for seed in args.eval_seeds]
-    policy_rows = [
-        rollout(model, algorithm, s.junction, s.plan, s.demand, seed,
-                args.reward, args.episode_steps, args.observe)
-        for s, seed in pairs
-    ]
-    row = {"scenarios": len(scenarios), "episodes": len(pairs),
-           "policy": {k: mean([r[k] for r in policy_rows]) for k in METRICS}}
+    rows = []
+    for scenario in scenarios:
+        for seed in args.eval_seeds:
+            policy = rollout(model, algorithm, scenario.junction, scenario.plan,
+                             scenario.demand, seed, args.reward,
+                             args.episode_steps, args.observe)
+            entry = {
+                "scenario": scenario.key, "junction": scenario.junction,
+                "plan": scenario.plan, "demand": scenario.demand,
+                "split": scenario.split, "seed": seed,
+                "policy": {k: policy[k] for k in METRICS},
+            }
+            for spec in args.baseline:
+                reference = controller_rollout(spec, scenario.junction,
+                                               scenario.plan, scenario.demand,
+                                               seed, args.episode_steps)
+                entry[spec] = {k: reference[k] for k in METRICS}
+                entry[f"delta_{spec}"] = round(
+                    policy["avg_travel_time_incl_unfinished_s"]
+                    - reference["avg_travel_time_incl_unfinished_s"], 3
+                )
+            rows.append(entry)
+            print(f"    {entry['scenario']:<48} "
+                  + "  ".join(f"{spec} {entry['delta_' + spec]:+7.2f}"
+                              for spec in args.baseline), flush=True)
+
+    summary = {"scenarios": len(scenarios), "episodes": len(rows), "rows": rows,
+               "policy": {k: mean([r["policy"][k] for r in rows]) for k in METRICS}}
     for spec in args.baseline:
-        reference = [
-            rollout_controller(spec, s.junction, s.plan, s.demand, seed,
-                               args.reward, args.episode_steps)
-            for s, seed in pairs
-        ]
-        deltas = [p["avg_travel_time_incl_unfinished_s"]
-                  - b["avg_travel_time_incl_unfinished_s"]
-                  for p, b in zip(policy_rows, reference)]
-        row[spec] = {k: mean([r[k] for r in reference]) for k in METRICS} | {
+        deltas = [r[f"delta_{spec}"] for r in rows]
+        summary[spec] = {k: mean([r[spec][k] for r in rows]) for k in METRICS} | {
             "paired_delta_travel_incl": round(mean(deltas), 3),
+            "median_delta_travel_incl": round(median(deltas), 3),
+            "worst_delta_travel_incl": round(max(deltas), 3),
+            "best_delta_travel_incl": round(min(deltas), 3),
             "wins": sum(1 for d in deltas if d < 0),
         }
-    ok, shortfall = comparability(row["policy"],
-                                  {spec: row[spec] for spec in args.baseline})
-    row["throughput_shortfall"] = shortfall
-    row["comparable"] = ok
-    return row
+    ok, shortfall = comparability(summary["policy"],
+                                  {spec: summary[spec] for spec in args.baseline})
+    summary["throughput_shortfall"] = shortfall
+    summary["comparable"] = ok
+    return summary
 
 
 def report(name: str, row: dict, args) -> None:
@@ -131,8 +162,12 @@ def report(name: str, row: dict, args) -> None:
               f"{values['avg_queue_veh']:7.2f} {values['throughput']:6.1f} "
               f"{values['unfinished']:6.1f} {values['switch_rate']:7.2f}")
     for spec in args.baseline:
-        print(f"  vs {spec:<20} {row[spec]['paired_delta_travel_incl']:+7.2f} s   "
-              f"wins {row[spec]['wins']}/{row['episodes']}")
+        entry = row[spec]
+        print(f"  vs {spec:<20} mean {entry['paired_delta_travel_incl']:+7.2f} s  "
+              f"median {entry['median_delta_travel_incl']:+7.2f} s  "
+              f"[{entry['best_delta_travel_incl']:+.2f}, "
+              f"{entry['worst_delta_travel_incl']:+.2f}]  "
+              f"wins {entry['wins']}/{row['episodes']}")
     if not row["comparable"]:
         print(f"  [warning] cleared {row['throughput_shortfall']:.0%} fewer vehicles "
               f"than the best baseline; travel time is not comparable here.")

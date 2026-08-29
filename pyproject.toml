@@ -71,6 +71,9 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["bevlight"]
+# Without this an aliased import gets its own `from x import y as z`
+# line, so one module ends up named three times in a row.
+combine-as-imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

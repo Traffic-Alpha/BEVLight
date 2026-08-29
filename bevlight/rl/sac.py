@@ -46,16 +46,8 @@ import torch
 import torch.nn.functional as F
 
 from ..model.teacher import TeacherNet, teacher_config
-
-# Everything about a junction that does not change during an episode. Stored once
-# per (junction, plan) and referenced by index: at ~5 KB a transition it would
-# otherwise be four fifths of the replay buffer, describing wiring that is the
-# same in every row.
-STRUCTURE_KEYS = (
-    "lane_valid", "movement_in_index", "movement_in_weight",
-    "movement_out_index", "movement_out_weight", "movement_valid",
-    "phase_members", "phase_member_valid", "phase_valid",
-)
+from ._internal.replay import NStepAccumulator, ReplayBuffer, next_batch, to_batch
+from ._internal.rollout import evaluate, preflight, rollout_controller
 
 
 @dataclass
@@ -109,167 +101,12 @@ class SACConfig:
     seed: int = 7
 
 
-class NStepAccumulator:
-    """Turns one environment's single steps into n-step transitions.
-
-    One per environment, because an n-step window must never span two episodes —
-    and with auto-reset the boundary is invisible in the observation stream. On
-    an episode end the whole queue is flushed, each remaining start with its own
-    shorter horizon, so the last few decisions of an episode are not discarded.
-
-    The bootstrap discount travels with the transition rather than being assumed:
-    at an episode end a window may be shorter than n, and using gamma^n there
-    would discount a value that is only m steps away.
-    """
-
-    def __init__(self, n: int, gamma: float):
-        from collections import deque
-
-        self.n, self.gamma = int(n), float(gamma)
-        self.pending: deque = deque()
-
-    def push(self, observation, action, reward, next_observation, terminal, done):
-        """-> the n-step transitions this step completed, possibly none."""
-        self.pending.append((observation, action, float(reward)))
-        if done:
-            emitted = self._drain(len(self.pending), next_observation, terminal)
-            self.pending.clear()
-            return emitted
-        if len(self.pending) >= self.n:
-            emitted = self._drain(1, next_observation, False)
-            self.pending.popleft()
-            return emitted
-        return []
-
-    def _drain(self, count: int, final_observation, terminal: bool) -> list:
-        entries = list(self.pending)
-        out = []
-        for start in range(count):
-            total, discount = 0.0, 1.0
-            for _, _, reward in entries[start:]:
-                total += discount * reward
-                discount *= self.gamma
-            observation, action, _ = entries[start]
-            # `discount` is now gamma ** (steps in this window) — the factor the
-            # bootstrapped value must be multiplied by.
-            out.append((observation, action, total, final_observation,
-                        terminal, discount))
-        return out
 
 
-class ReplayBuffer:
-    """Transitions, with the junction wiring factored out.
-
-    `lane_state` is kept in float16: it holds queue counts, an occupancy fraction
-    and a flag, none of which carry seven significant digits, and it is otherwise
-    four fifths of the memory.
-    """
-
-    def __init__(self, capacity: int, window: int, max_lanes: int, lane_dim: int):
-        self.capacity = int(capacity)
-        self.size, self.cursor = 0, 0
-        shape = (self.capacity, window, max_lanes, lane_dim)
-        self.lane_state = np.zeros(shape, dtype=np.float16)
-        self.next_lane_state = np.zeros(shape, dtype=np.float16)
-        self.current_phase = np.zeros(self.capacity, dtype=np.int64)
-        self.next_current_phase = np.zeros(self.capacity, dtype=np.int64)
-        self.time_in_phase = np.zeros(self.capacity, dtype=np.float32)
-        self.next_time_in_phase = np.zeros(self.capacity, dtype=np.float32)
-        self.action = np.zeros(self.capacity, dtype=np.int64)
-        self.reward = np.zeros(self.capacity, dtype=np.float32)
-        # True only when the network really drained. A horizon cut leaves traffic
-        # on the road, and its value has to be bootstrapped rather than zeroed.
-        self.terminal = np.zeros(self.capacity, dtype=np.float32)
-        # gamma ** (steps in this transition's window). Not a constant: a window
-        # cut short by the end of an episode bootstraps from closer in.
-        self.discount = np.zeros(self.capacity, dtype=np.float32)
-        self.structure_id = np.zeros(self.capacity, dtype=np.int64)
-        self._structure_index: dict = {}
-        self._structures: list = []
-        self._stacked: dict | None = None
-
-    def structure_slot(self, key, observation: dict) -> int:
-        if key not in self._structure_index:
-            self._structure_index[key] = len(self._structures)
-            self._structures.append({k: observation[k] for k in STRUCTURE_KEYS})
-            self._stacked = None
-        return self._structure_index[key]
-
-    def stack_structures(self) -> dict:
-        """Cached: rebuilt only when a junction the buffer has not seen arrives."""
-        if self._stacked is None:
-            self._stacked = {k: np.stack([s[k] for s in self._structures])
-                             for k in STRUCTURE_KEYS}
-        return self._stacked
-
-    def add(self, key, observation, action, reward, next_observation, terminal,
-            discount) -> None:
-        i = self.cursor
-        self.lane_state[i] = observation["lane_state"]
-        self.next_lane_state[i] = next_observation["lane_state"]
-        self.current_phase[i] = observation["current_phase"]
-        self.next_current_phase[i] = next_observation["current_phase"]
-        self.time_in_phase[i] = observation["time_in_phase"]
-        self.next_time_in_phase[i] = next_observation["time_in_phase"]
-        self.action[i] = action
-        self.reward[i] = reward
-        self.terminal[i] = float(terminal)
-        self.discount[i] = float(discount)
-        self.structure_id[i] = self.structure_slot(key, observation)
-        self.cursor = (self.cursor + 1) % self.capacity
-        self.size = min(self.size + 1, self.capacity)
-
-    def sample(self, batch_size: int, device) -> dict:
-        index = np.random.randint(0, self.size, size=batch_size)
-        structures = self.stack_structures()
-        ids = self.structure_id[index]
-
-        def tensor(array, dtype=torch.float32):
-            return torch.as_tensor(array, dtype=dtype, device=device)
-
-        batch = {k: tensor(structures[k][ids],
-                           torch.int64 if structures[k].dtype == np.int64 else torch.float32)
-                 for k in STRUCTURE_KEYS}
-        batch.update(
-            lane_state=tensor(self.lane_state[index].astype(np.float32)),
-            next_lane_state=tensor(self.next_lane_state[index].astype(np.float32)),
-            current_phase=tensor(self.current_phase[index], torch.int64),
-            next_current_phase=tensor(self.next_current_phase[index], torch.int64),
-            time_in_phase=tensor(self.time_in_phase[index]),
-            next_time_in_phase=tensor(self.next_time_in_phase[index]),
-            action=tensor(self.action[index], torch.int64),
-            reward=tensor(self.reward[index]),
-            terminal=tensor(self.terminal[index]),
-            discount=tensor(self.discount[index]),
-        )
-        return batch
 
 
-def to_batch(observations: list[dict], device) -> dict:
-    """Stack environment observations into what `TeacherNet` consumes."""
-    batch = {}
-    for key in STRUCTURE_KEYS:
-        stacked = np.stack([o[key] for o in observations])
-        dtype = torch.int64 if stacked.dtype == np.int64 else torch.float32
-        batch[key] = torch.as_tensor(stacked, dtype=dtype, device=device)
-    batch["lane_state"] = torch.as_tensor(
-        np.stack([o["lane_state"] for o in observations]), dtype=torch.float32, device=device
-    )
-    batch["current_phase"] = torch.as_tensor(
-        [o["current_phase"] for o in observations], dtype=torch.int64, device=device
-    )
-    batch["time_in_phase"] = torch.as_tensor(
-        [o["time_in_phase"] for o in observations], dtype=torch.float32, device=device
-    )
-    return batch
 
 
-def next_batch(batch: dict) -> dict:
-    """The same wiring, the next state. The junction did not change mid-episode."""
-    return {**batch,
-            "lane_state": batch["next_lane_state"],
-            "current_phase": batch["next_current_phase"],
-            "time_in_phase": batch["next_time_in_phase"]}
 
 
 def policy(scores: torch.Tensor, phase_valid: torch.Tensor):
@@ -430,101 +267,12 @@ class DiscreteSAC:
                 "config": asdict(self.config)}
 
 
-def rollout_policy(agent, junction, plan, demand, seed, device, reward, steps=None,
-                   observe="window") -> dict:
-    """One greedy episode. The metrics are the ones the results tables report."""
-    from ..env.gym_env import JunctionEnv
-
-    env = JunctionEnv(junction, plan, demand, seed=seed, num_seconds=steps,
-                      render=False, allow_any_scenario=True, reward=reward,
-                      observe=observe)
-    try:
-        observation, _, done, _ = env.reset()
-        while not done:
-            action = int(agent.act(to_batch([observation], device), greedy=True)[0])
-            observation, _, done, _ = env.step(action)
-        return env.summary()
-    finally:
-        env.close()
 
 
-def rollout_controller(spec, junction, plan, demand, seed, reward, steps=None) -> dict:
-    """The same episode under a rule-based controller, for the paired comparison."""
-    from ..env.gym_env import JunctionEnv
-    from ..eval.compare import build_controller
-
-    env = JunctionEnv(junction, plan, demand, seed=seed, num_seconds=steps,
-                      render=False, allow_any_scenario=True, reward=reward)
-    controller = build_controller(spec)
-    controller.reset(env.signal_plan)
-    try:
-        _, _, done, _ = env.reset()
-        while not done:
-            action = env.signal_plan.phases.index(
-                controller.act(env._pending, env.signal_plan)
-            )
-            _, _, done, _ = env.step(action)
-        return env.summary()
-    finally:
-        env.close()
 
 
-def preflight(junction, plan, demand, reward, steps=None) -> dict:
-    """Two episodes, before spending hours: does the reward order what it should?
-
-    Deliberately not the full `bevlight rl preflight`, which needs several
-    controllers to separate "correct" from "correct by construction". This is the
-    cheaper guard against the failure that wastes a whole run: a reward that is
-    flat, inverted, or identical for a good and a bad controller. The first
-    version of this project's reward telescoped to exactly zero for every
-    controller, and a day of training with a flat curve is indistinguishable from
-    a bad learning rate.
-    """
-    from .preflight import rollout
-
-    rows = {spec: rollout(junction, plan, demand, spec, 7, steps)
-            for spec in ("fixed_time", "max_pressure")}
-    good, bad = rows["max_pressure"]["reward_live"], rows["fixed_time"]["reward_live"]
-    margin = (good - bad) / abs(bad) if bad else 0.0
-    ordered = good > bad and margin > 0.05
-    print(f"[reward] max_pressure {good:+.5f} vs fixed_time {bad:+.5f} "
-          f"(margin {margin:+.1%}) -> {'ordered correctly' if ordered else 'NOT ORDERED'}")
-    print(f"[reward] travel time  max_pressure {rows['max_pressure']['avg_travel_time_s']:.2f}s "
-          f"vs fixed_time {rows['fixed_time']['avg_travel_time_s']:.2f}s")
-    return {"ordered": ordered, "margin": margin,
-            "max_pressure": good, "fixed_time": bad}
 
 
-def evaluate(agent, junction, plan, demand, seeds, device, reward, baselines,
-             steps=None, observe="window") -> dict:
-    """The gate's actual question, paired seed by seed.
-
-    Common random numbers: the policy and max-pressure are scored on the *same*
-    traffic, and the difference is taken per seed before averaging. The demand
-    realisation is the largest source of variance in these numbers and pairing
-    removes it outright — without that, a 1-3% difference is invisible under a
-    noise floor measured at 1.2 s.
-    """
-    rows = [rollout_policy(agent, junction, plan, demand, seed, device, reward,
-                           steps, observe)
-            for seed in seeds]
-
-    def mean(values):
-        return float(sum(values) / len(values)) if values else 0.0
-
-    result = {"policy": {k: mean([r[k] for r in rows])
-                         for k in ("avg_travel_time_s", "avg_waiting_time_s",
-                                   "avg_queue_veh", "throughput", "switch_rate")}}
-    for spec, reference in baselines.items():
-        deltas = [r["avg_travel_time_s"] - b["avg_travel_time_s"]
-                  for r, b in zip(rows, reference)]
-        result[spec] = {
-            "travel": mean([b["avg_travel_time_s"] for b in reference]),
-            "paired_delta_travel": round(mean(deltas), 3),
-            "per_seed_delta": [round(d, 3) for d in deltas],
-            "wins": sum(1 for d in deltas if d < 0),
-        }
-    return result
 
 
 def train(config: SACConfig, junction: str, plan: str, demand: str,

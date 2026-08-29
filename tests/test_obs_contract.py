@@ -168,8 +168,7 @@ def test_a_teacher_scored_through_the_controller_interface_matches_its_own_loop(
     from bevlight.env import run_episode
     from bevlight.env.gym_env import JunctionEnv
     from bevlight.eval.policies import TeacherController
-    from bevlight.rl.sac import policy as sac_policy
-    from bevlight.rl.sac import to_batch
+    from bevlight.rl.sac import policy as sac_policy, to_batch
 
     checkpoint = Path(__file__).resolve().parents[1] / (
         "runs/train/gate1_ymt_window/teacher_060000.pt"

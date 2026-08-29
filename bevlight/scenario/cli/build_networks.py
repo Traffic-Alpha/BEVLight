@@ -24,8 +24,7 @@ import sys
 from collections.abc import Iterable
 from pathlib import Path
 
-from ...cli.tshub import configure_tshub_import
-from ...cli.tshub import resolve_tshub_root as _resolve_tshub_root
+from ...cli.tshub import configure_tshub_import, resolve_tshub_root as _resolve_tshub_root
 from ...paths import SCENARIOS_ROOT
 
 DEFAULT_NET_PLAN = "normal"

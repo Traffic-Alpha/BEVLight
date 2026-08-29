@@ -26,7 +26,8 @@ torch = pytest.importorskip("torch")
 
 from bevlight.data.collate import junction_structure
 from bevlight.model.teacher import LANE_STATE_DIM, TeacherNet, teacher_config
-from bevlight.rl.sac import STRUCTURE_KEYS, ReplayBuffer, policy, to_batch
+from bevlight.rl._internal.replay import STRUCTURE_KEYS, ReplayBuffer, to_batch
+from bevlight.rl.sac import policy
 from bevlight.scenario.lane_mask import load_lane_mask
 
 WINDOW = 5
@@ -142,7 +143,7 @@ def test_the_lane_state_window_reaches_the_model(teacher):
 
 def test_a_full_window_is_the_discounted_sum():
     """R = r0 + g r1 + g^2 r2, bootstrapping g^3 away."""
-    from bevlight.rl.sac import NStepAccumulator
+    from bevlight.rl._internal.replay import NStepAccumulator
 
     acc = NStepAccumulator(3, 0.5)
     assert acc.push("s0", 0, 1.0, "s1", False, False) == []
@@ -162,7 +163,7 @@ def test_the_end_of_an_episode_flushes_every_shorter_window():
     Dropping them would silently discard the jam-clearing tail — the part of the
     episode where the control problem is hardest.
     """
-    from bevlight.rl.sac import NStepAccumulator
+    from bevlight.rl._internal.replay import NStepAccumulator
 
     acc = NStepAccumulator(3, 0.5)
     acc.push("s0", 0, 1.0, "s1", False, False)
@@ -180,7 +181,7 @@ def test_the_end_of_an_episode_flushes_every_shorter_window():
 
 def test_no_window_spans_two_episodes():
     """After a reset the queue restarts, so no reward crosses the boundary."""
-    from bevlight.rl.sac import NStepAccumulator
+    from bevlight.rl._internal.replay import NStepAccumulator
 
     acc = NStepAccumulator(3, 0.9)
     acc.push("a0", 0, 1.0, "a1", False, False)
@@ -192,7 +193,7 @@ def test_no_window_spans_two_episodes():
 
 def test_one_step_is_plain_td():
     """n=1 must reproduce the single-step target exactly."""
-    from bevlight.rl.sac import NStepAccumulator
+    from bevlight.rl._internal.replay import NStepAccumulator
 
     acc = NStepAccumulator(1, 0.95)
     emitted = acc.push("s0", 2, -0.4, "s1", False, False)
@@ -203,7 +204,7 @@ def test_one_step_is_plain_td():
 
 def test_every_decision_reaches_the_buffer_exactly_once():
     """Across episodes, transitions in must equal transitions out."""
-    from bevlight.rl.sac import NStepAccumulator
+    from bevlight.rl._internal.replay import NStepAccumulator
 
     acc = NStepAccumulator(4, 0.99)
     pushed = emitted = 0

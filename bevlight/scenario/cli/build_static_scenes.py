@@ -32,13 +32,9 @@ from pathlib import Path
 
 from ...cli.tshub import (
     PROBE_SCENE,
+    blender_scene_scripts as get_blender_scripts,
     configure_tshub_import,
     find_blender,
-)
-from ...cli.tshub import (
-    blender_scene_scripts as get_blender_scripts,
-)
-from ...cli.tshub import (
     resolve_tshub_root as _resolve_tshub_root,
 )
 from ...paths import SCENARIOS_ROOT, SCENE_ASSETS_DIR_NAME

@@ -47,7 +47,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -86,14 +85,15 @@ def measure(junction: str, plan: str, demand: str, scale: float, seed: int = 7,
     The controller is a parameter because the queue is as much a property of the
     signal algorithm as of the demand.
     """
-    from ..observation import ObservationExtractor
-    from ...eval.compare import build_controller
-    from ...expert import SignalPlan
-    from ...scenario.lane_mask import load_lane_mask
-    from ...scenario.loader import load_junction_config
-    from ...paths import LOG_ROOT
     from tshub.tshub_env.tshub_env import TshubEnvironment
     from tshub.utils.init_log import set_logger
+
+    from ...eval.compare import build_controller
+    from ...expert import SignalPlan
+    from ...paths import LOG_ROOT
+    from ...scenario.lane_mask import load_lane_mask
+    from ...scenario.loader import load_junction_config
+    from ..observation import ObservationExtractor
 
     set_logger(str(LOG_ROOT / junction), terminal_log_level="ERROR")
     cfg = load_junction_config(junction, f"{plan}_{demand}")

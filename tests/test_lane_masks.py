@@ -150,12 +150,11 @@ def test_the_mask_raster_agrees_with_its_own_projection(junction, plan, demand):
     """
     import json
 
-    import numpy as np
     import traci
 
+    from bevlight.paths import BEV_CAMERA_TABLE, SCENARIOS_ROOT
     from bevlight.scenario.bev_camera import BevCamera
     from bevlight.scenario.lane_mask import load_lane_mask
-    from bevlight.paths import BEV_CAMERA_TABLE, SCENARIOS_ROOT
 
     mask = load_lane_mask(junction, plan)
     labels = mask.labels

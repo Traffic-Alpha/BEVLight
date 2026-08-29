@@ -37,17 +37,20 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from ...cli.tshub import (
+    PROBE_BLENDER_RENDER,
+    find_blender,
+)
+from ...cli.tshub import (
+    blender_render_episode_script as render_episode_script,
+)
+from ...cli.tshub import (
+    resolve_tshub_root as _resolve_tshub_root,
+)
 from ...paths import (
     EPISODES_ROOT,
     episode_images_dir,
 )
-from ...cli.tshub import (
-    PROBE_BLENDER_RENDER,
-    blender_render_episode_script as render_episode_script,
-    find_blender,
-    resolve_tshub_root as _resolve_tshub_root,
-)
-
 
 # The appearance conditions every episode is rendered under. Each lands in its
 # own variant directory (blender_day, blender_golden, blender_dusk_rain), and

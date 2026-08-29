@@ -24,7 +24,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..paths import LANE_MASK_DIR_NAME as MASK_DIR_NAME, SCENARIOS_ROOT
+from ..paths import LANE_MASK_DIR_NAME as MASK_DIR_NAME
+from ..paths import SCENARIOS_ROOT
 
 META_NAME = "lane_mask.json"
 

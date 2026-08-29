@@ -52,7 +52,7 @@ class SignalPlan:
         return self.phase2movements[phase]
 
     @classmethod
-    def from_lane_mask(cls, mask) -> "SignalPlan":
+    def from_lane_mask(cls, mask) -> SignalPlan:
         """Build the plan from a loaded lane mask, which is already plan-scoped."""
         phase2movements = {
             int(phase): tuple(movements) for phase, movements in mask.phase2movements.items()

@@ -45,16 +45,20 @@ import json
 import sys
 from pathlib import Path
 
+from ...cli.tshub import configure_tshub_import, resolve_tshub_root
+from ...cli.viz import colorize, write_preview
 from ...paths import (
     EPISODES_ROOT,
-    LANE_MASK_CHECK_ROOT as OVERLAY_ROOT,
-    LANE_MASK_DIR_NAME as MASK_DIR_NAME,
     LOG_ROOT,
     PROJECT_ROOT,
     SCENARIOS_ROOT,
 )
-from ...cli.viz import colorize, write_preview
-from ...cli.tshub import configure_tshub_import, resolve_tshub_root  # noqa: F401
+from ...paths import (
+    LANE_MASK_CHECK_ROOT as OVERLAY_ROOT,
+)
+from ...paths import (
+    LANE_MASK_DIR_NAME as MASK_DIR_NAME,
+)
 
 DEFAULT_RESOLUTIONS = ("1022x1022", "720x720")
 META_NAME = "lane_mask.json"
@@ -87,11 +91,12 @@ def read_tls_state(junction: str, env_name: str, seed: int = 7) -> tuple[dict, d
     The BEV rig is computed by the same tshub helper the renderers use, so the
     mask camera center is identical to the one used at render time.
     """
-    from ..loader import load_junction_config
-    from ..bev_camera import bev_height
-    from tshub.utils.init_log import set_logger
     from tshub.tshub_env.tshub_env import TshubEnvironment
     from tshub.tshub_env3d.core import build_tls_rigs
+    from tshub.utils.init_log import set_logger
+
+    from ..bev_camera import bev_height
+    from ..loader import load_junction_config
 
     cfg = load_junction_config(junction, env_name)
     tls_id = cfg["tls_id"]
@@ -181,10 +186,10 @@ def collect_lanes(net, tls_info: dict, include_internal: bool) -> list[dict]:
     """
     in_lane_ids = road_lane_ids(tls_info, tls_info["in_roads"])
     out_lane_ids = road_lane_ids(tls_info, tls_info["out_roads"])
-    roles = {lane_id: "incoming" for lane_id in in_lane_ids}
-    roles.update({lane_id: "outgoing" for lane_id in out_lane_ids})
+    roles = dict.fromkeys(in_lane_ids, "incoming")
+    roles.update(dict.fromkeys(out_lane_ids, "outgoing"))
     if include_internal:
-        roles.update({lane_id: "internal" for lane_id in internal_lane_ids(net, in_lane_ids)})
+        roles.update(dict.fromkeys(internal_lane_ids(net, in_lane_ids), "internal"))
 
     lane_movements: dict[str, list[str]] = {}
     for movement_id, lane_ids in tls_info.get("movement_lane_ids", {}).items():
@@ -397,20 +402,20 @@ def build_one_plan(
     out_dir: Path,
 ) -> dict:
     """Solve the window, rasterize the mask and write the images for one plan."""
+    import cv2
     import numpy as np
     import sumolib
-    import cv2
 
-    from ..loader import load_junction_config
     from ..bev_camera import (
         BEV_HEIGHT_MARGIN_M,
-        BevCamera,
         JAM_SPACING_M,
         TARGET_VISIBLE_APPROACH_M,
+        BevCamera,
         resolution_for_ortho,
         solve_ortho_size,
         visible_approach_lengths,
     )
+    from ..loader import load_junction_config
 
     env_name = f"{plan}_{demand}"
     cfg = load_junction_config(junction, env_name)

@@ -18,20 +18,20 @@ cli/ -- build side, runs SUMO / Blender, one-off per junction:
     render_reference    the BEV frames those overlays are drawn over
     lane_views          a BEV frame + a mask -> one image per lane (inspection)
 '''
+from .lane_mask import LaneMask, load_lane_mask
 from .loader import (
     AVAILABLE_JUNCTIONS,
     load_event_config,
     load_junction_config,
 )
-from .lane_mask import LaneMask, load_lane_mask
 from .selection import Scenario, load_selection
 
 __all__ = [
     "AVAILABLE_JUNCTIONS",
     "LaneMask",
     "Scenario",
-    "load_selection",
     "load_event_config",
     "load_junction_config",
     "load_lane_mask",
+    "load_selection",
 ]

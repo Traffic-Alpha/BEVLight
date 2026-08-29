@@ -66,7 +66,7 @@ def find_bev_frames(junction: str, source: str) -> list[Path]:
     return frames
 
 
-def contact_sheet(bev, tiles: list[tuple[str, "object"]], columns: int = 6):
+def contact_sheet(bev, tiles: list[tuple[str, object]], columns: int = 6):
     """BEV plus every lane view on one labeled sheet."""
     import cv2
     import numpy as np

@@ -100,7 +100,7 @@ def main(argv=None) -> int:
         switch = overall["accuracy_on_switch"]
         print(f"{name:<20} {overall['accuracy']:7.3f} "
               f"{'   n/a' if switch is None else f'{switch:8.3f}'} "
-              f"{overall['top2']:7.3f} {str(overall['macro_f1']):>8} "
+              f"{overall['top2']:7.3f} {overall['macro_f1']!s:>8} "
               f"{overall.get('queue_mae', float('nan')):9.3f}")
     reference = next(iter(results.values()))["references"]
     print("reference            " + "  ".join(f"{k}={v:.3f}" for k, v in reference.items()))

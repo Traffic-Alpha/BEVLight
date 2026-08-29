@@ -20,7 +20,6 @@ from pathlib import Path
 
 from ...paths import BEV_REFERENCE_ROOT
 
-
 #: Enough seconds for queues to build; a frame of empty road proves nothing.
 REFERENCE_SECOND = 420
 

@@ -32,10 +32,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .render import (image_modality, make_panda_renderer, make_render_exporter,
-                     save_panda_image)
-from .sumo import (DECISION_INTERVAL_S, IDLE_TIMEOUT_S, PANDA_VARIANT,
-                   YELLOW_TIME_S, build_environment, mask_dir_of)
+from .render import image_modality, make_panda_renderer, make_render_exporter, save_panda_image
+from .sumo import (
+    DECISION_INTERVAL_S,
+    IDLE_TIMEOUT_S,
+    PANDA_VARIANT,
+    YELLOW_TIME_S,
+    build_environment,
+)
 
 
 @dataclass
@@ -82,14 +86,15 @@ def run_episode(
     With `episode_dir`, also writes the trajectory: per-lane truth, expert
     decisions, and tshub render frames, all indexed by the same frame numbers.
     """
-    from ..collect.episode_schema import LANE_FIELDS, Episode, EpisodeStatic
+    from tshub.tshub_env3d.core import build_frame
+    from tshub.utils.init_log import set_logger
+
+    from ..collect.episode_schema import LANE_FIELDS
     from ..collect.observation import ObservationExtractor
     from ..eval.metrics import EpisodeMetrics
     from ..expert.base import SignalPlan
-    from ..scenario.lane_mask import load_lane_mask
     from ..paths import LOG_ROOT, PROJECT_ROOT, episode_images_dir
-    from tshub.tshub_env3d.core import build_frame
-    from tshub.utils.init_log import set_logger
+    from ..scenario.lane_mask import load_lane_mask
 
     set_logger(str(log_dir or (LOG_ROOT / junction)), terminal_log_level="ERROR")
 

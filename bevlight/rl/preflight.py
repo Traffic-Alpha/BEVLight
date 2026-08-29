@@ -37,7 +37,6 @@ in this file rather than a finding.
 
 from __future__ import annotations
 
-
 from ..env.rewards import CANDIDATES, REWARDS, RewardContext
 
 # What the reward is being asked to agree with. Travel time is the headline, and
@@ -65,7 +64,7 @@ class CostProbe:
         self._reset()
 
     def _reset(self) -> None:
-        self.totals = {name: 0.0 for name in CANDIDATES}
+        self.totals = dict.fromkeys(CANDIDATES, 0.0)
         self.seconds = 0
 
     def _wrapped_tick(self, obs, phase):
@@ -99,7 +98,7 @@ class CostProbe:
     def take(self) -> dict:
         """The interval's rewards, then start the next one — as `_reward` does."""
         if not self.seconds:
-            rewards = {name: 0.0 for name in CANDIDATES}
+            rewards = dict.fromkeys(CANDIDATES, 0.0)
         else:
             rewards = {name: -total / self.seconds for name, total in self.totals.items()}
         self._reset()
@@ -118,7 +117,7 @@ def rollout(junction: str, plan: str, demand: str, controller_spec: str,
     controller.reset(env.signal_plan)
     probe = CostProbe(env)
 
-    returns = {name: 0.0 for name in CANDIDATES}
+    returns = dict.fromkeys(CANDIDATES, 0.0)
     live_return, decisions = 0.0, 0
     try:
         _, _, done, _ = env.reset()
@@ -344,7 +343,7 @@ def run(args) -> dict:
                               demand=scenario.demand)
                 rows.append(record)
                 done += 1
-                print(f"  [{done:3d}/{jobs}] {str(scenario):46s} seed={seed} "
+                print(f"  [{done:3d}/{jobs}] {scenario!s:46s} seed={seed} "
                       f"{spec:18s} travel={record['avg_travel_time_s']:7.2f} "
                       f"R_visible_queue={record['reward_visible_queue']:+8.4f}",
                       flush=True)

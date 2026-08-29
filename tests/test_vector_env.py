@@ -17,7 +17,6 @@ pytest.importorskip("torch")
 pytest.importorskip("tshub", reason="needs the tshub environment")
 
 from bevlight.env.vector import RemoteEnv
-from bevlight.eval.compare import build_controller
 
 SCENARIO = dict(junction="Beijing_Beihuan", plan="normal", demand="low_density",
                 num_seconds=200, render=False)

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 from ..paths import SCENARIO_SELECTION
@@ -104,7 +104,7 @@ def _expand(entry: dict, split: str, plans_key: str) -> list[Scenario]:
     ]
 
 
-@lru_cache(maxsize=None)
+@cache
 def load_selection(path: Path | str | None = None) -> Selection:
     """Load the active scenario manifest. Cached: the file never changes mid-run."""
     manifest_path = Path(path) if path is not None else SCENARIO_SELECTION

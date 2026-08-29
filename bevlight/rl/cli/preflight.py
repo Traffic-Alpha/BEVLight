@@ -14,9 +14,9 @@ import argparse
 import json
 from pathlib import Path
 
-from ..preflight import DEFAULT_CONTROLLERS, run, tabulate
 from ...paths import REPORTS_ROOT
 from ...scenario.selection import SPLITS
+from ..preflight import DEFAULT_CONTROLLERS, run, tabulate
 
 
 def parse_args(argv=None) -> argparse.Namespace:

@@ -9,7 +9,6 @@ model.
 
 from __future__ import annotations
 
-
 from ..closed_loop import MIN_HEADROOM_S, summarize_run
 
 

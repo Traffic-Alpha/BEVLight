@@ -29,11 +29,11 @@ import torch
 import torch.nn as nn
 
 from ._internal.decision import DecisionLayer
-from .heads import LaneHead, QueueHead
-from .mask_pool import MaskPool
 from ._internal.movement import MovementLayer
 from ._internal.phase import PhaseLayer
 from ._internal.temporal import TemporalFusion
+from .heads import LaneHead, QueueHead
+from .mask_pool import MaskPool
 
 
 @dataclass

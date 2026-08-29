@@ -19,6 +19,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from ...paths import EPISODES_ROOT
 from .blender import (
     available_episode_manifests,
     flatten_blender_variant,
@@ -26,7 +27,6 @@ from .blender import (
     parse_conditions,
     selected_manifest_path,
 )
-from ...paths import EPISODES_ROOT
 
 
 def parse_args() -> argparse.Namespace:

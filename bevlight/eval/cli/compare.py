@@ -12,9 +12,9 @@ import argparse
 import json
 from pathlib import Path
 
-from ..compare import run, tabulate
 from ...paths import REPORTS_ROOT
 from ...scenario.selection import SPLITS
+from ..compare import run, tabulate
 
 
 def parse_args(argv=None) -> argparse.Namespace:

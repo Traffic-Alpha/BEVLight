@@ -52,7 +52,7 @@ class EpisodeKey:
         return f"{self.plan}_{self.demand}"
 
     @classmethod
-    def parse(cls, key: str) -> "EpisodeKey":
+    def parse(cls, key: str) -> EpisodeKey:
         match = _EPISODE_KEY_RE.match(key)
         if match is None:
             raise ValueError(f"Not an episode key: {key!r}")

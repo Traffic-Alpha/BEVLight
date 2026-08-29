@@ -25,10 +25,10 @@ controller is one file plus one line and never an import somewhere else:
     fixed_time, max_pressure, random_phase
 '''
 
-from .base import BaseController, Controller, SignalPlan
 from ._internal.fixed_time import FixedTime
 from ._internal.max_pressure import MaxPressure
 from ._internal.random_phase import RandomPhase
+from .base import BaseController, Controller, SignalPlan
 
 CONTROLLERS = {
     FixedTime.name: FixedTime,
@@ -37,8 +37,8 @@ CONTROLLERS = {
 }
 
 __all__ = [
-    "BaseController",
     "CONTROLLERS",
+    "BaseController",
     "Controller",
     "FixedTime",
     "MaxPressure",

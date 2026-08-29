@@ -21,12 +21,12 @@ import argparse
 import shutil
 import subprocess
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
-from ...paths import SCENARIOS_ROOT
-from ...cli.tshub import configure_tshub_import  # noqa: F401
+from ...cli.tshub import configure_tshub_import
 from ...cli.tshub import resolve_tshub_root as _resolve_tshub_root
+from ...paths import SCENARIOS_ROOT
 
 DEFAULT_NET_PLAN = "normal"
 PROBE_OSM_BUILD = Path("tshub/sumo_tools/osm_build.py")

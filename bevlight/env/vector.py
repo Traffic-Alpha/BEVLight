@@ -24,8 +24,6 @@ make this slower than doing nothing.
 
 from __future__ import annotations
 
-import numpy as np
-
 
 def build_env(device=None, **config):
     """One `JunctionEnv`, with a feature extractor only if it renders.

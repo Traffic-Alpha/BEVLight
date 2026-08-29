@@ -26,8 +26,8 @@ torch = pytest.importorskip("torch")
 
 from bevlight.data.collate import junction_structure
 from bevlight.model.teacher import LANE_STATE_DIM, TeacherNet, teacher_config
+from bevlight.rl.sac import STRUCTURE_KEYS, ReplayBuffer, policy, to_batch
 from bevlight.scenario.lane_mask import load_lane_mask
-from bevlight.rl.sac import ReplayBuffer, STRUCTURE_KEYS, policy, to_batch
 
 WINDOW = 5
 

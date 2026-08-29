@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .sumo import PANDA_VARIANT
 
 def render_sensor_config(junction: str, plan: str, tls_id: str) -> dict:
     from ..scenario.bev_camera import bev_height, bev_ortho_size
@@ -43,10 +42,11 @@ def make_render_exporter(junction: str, plan: str, states: dict, tls_id: str, ep
     No renderer is involved: exporting a frame is bookkeeping over vehicle poses,
     which is exactly why simulation can stay decoupled from rendering.
     """
-    from ..scenario.bev_camera import bev_resolution
-    from ..paths import scene_assets_dir
     from tshub.tshub_env3d.core import build_tls_rigs
     from tshub.tshub_env3d.core.export import BlenderEpisodeExporter
+
+    from ..paths import scene_assets_dir
+    from ..scenario.bev_camera import bev_resolution
 
     sensor_config = render_sensor_config(junction, plan, tls_id)
     exporter = BlenderEpisodeExporter(
@@ -94,10 +94,11 @@ def make_panda_renderer(
     """Create TSHub's Panda renderer for the live SUMO state stream."""
     import os
 
-    from ..scenario.bev_camera import apply_junction_render_preset
-    from ..paths import scene_assets_dir
     from tshub.tshub_env3d.core import SceneStatic, build_tls_rigs
     from tshub.tshub_env3d.renderers import create_renderer
+
+    from ..paths import scene_assets_dir
+    from ..scenario.bev_camera import apply_junction_render_preset
 
     sensor_config = render_sensor_config(junction, plan, tls_id)
     render_preset = apply_junction_render_preset(junction, plan) if preset == "auto" else preset

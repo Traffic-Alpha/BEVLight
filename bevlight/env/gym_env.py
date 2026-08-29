@@ -31,8 +31,8 @@ from collections import deque
 
 import numpy as np
 
-from .render import image_modality, make_panda_renderer, render_sensor_config
-from .sumo import DECISION_INTERVAL_S, YELLOW_TIME_S, build_environment
+from .render import image_modality, make_panda_renderer
+from .sumo import DECISION_INTERVAL_S, build_environment
 
 
 class JunctionEnv:
@@ -144,9 +144,10 @@ class JunctionEnv:
     # ------------------------------------------------------------------ setup
 
     def _open(self):
+        from tshub.utils.init_log import set_logger
+
         from ..eval.metrics import EpisodeMetrics
         from ..paths import LOG_ROOT
-        from tshub.utils.init_log import set_logger
 
         set_logger(str(LOG_ROOT / self.junction), terminal_log_level=self.log_level)
         self.close()

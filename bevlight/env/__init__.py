@@ -27,6 +27,15 @@ from .obs_spec import ObsMode, ObsScope, ObsSpec
 from .rewards import REWARDS
 from .sumo import DECISION_INTERVAL_S, PANDA_VARIANT, YELLOW_TIME_S
 
-__all__ = ["EpisodeResult", "run_episode", "JunctionEnv",
-           "ObsSpec", "ObsScope", "ObsMode", "REWARDS",
-           "DECISION_INTERVAL_S", "YELLOW_TIME_S", "PANDA_VARIANT"]
+__all__ = [
+           "DECISION_INTERVAL_S",
+           "PANDA_VARIANT",
+           "REWARDS",
+           "YELLOW_TIME_S",
+           "EpisodeResult",
+           "JunctionEnv",
+           "ObsMode",
+           "ObsScope",
+           "ObsSpec",
+           "run_episode",
+]

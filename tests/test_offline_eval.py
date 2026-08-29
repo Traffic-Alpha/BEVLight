@@ -119,7 +119,7 @@ def test_the_summary_refuses_a_denominator_too_small_to_divide_by(tmp_path):
     assert summary["median_delta_s"] == 1.25
     # Only the wide-headroom scenario reaches the gain median.
     assert summary["median_gain_pct"] == 90.0
-    assert 41.0 - 40.0 < MIN_HEADROOM_S
+    assert MIN_HEADROOM_S > 41.0 - 40.0
 
 
 def test_the_summary_sums_unfinished_vehicles_across_scenarios():
@@ -129,10 +129,9 @@ def test_the_summary_sums_unfinished_vehicles_across_scenarios():
     strands traffic can look *faster*. The count has to be carried separately.
     """
     import json
+    import tempfile
 
     from bevlight.eval.closed_loop import summarize_run
-    from pathlib import Path
-    import tempfile
 
     with tempfile.TemporaryDirectory() as d:
         results = []

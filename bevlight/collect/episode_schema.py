@@ -25,7 +25,7 @@ straight into a (T, N) tensor.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 SCHEMA_VERSION = 1

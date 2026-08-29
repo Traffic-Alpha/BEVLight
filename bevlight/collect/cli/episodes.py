@@ -61,9 +61,9 @@ def main(argv=None) -> int:
     args = parse_args(argv)
 
     from ...env import run_episode
+    from ...eval.compare import build_controller
     from ..episode_schema import load_episode
     from ..frame_selection import select_frames, write_blender_manifest
-    from ...eval.compare import build_controller
 
     selection = load_selection()
     scenarios = selection.split(args.split)

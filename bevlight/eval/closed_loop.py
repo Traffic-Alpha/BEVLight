@@ -29,8 +29,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from ..env import DECISION_INTERVAL_S
 from ..data.collate import collate, junction_structure
+from ..env import DECISION_INTERVAL_S
 from ..expert.base import BaseController
 
 

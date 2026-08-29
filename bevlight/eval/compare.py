@@ -13,7 +13,6 @@ tuning an expert is a number that can no longer be reported.
 
 from __future__ import annotations
 
-
 from ..scenario.selection import load_selection
 
 # Metrics worth showing side by side, and which direction is better.

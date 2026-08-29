@@ -38,14 +38,13 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-from ..data.collate import MAX_PHASES
 from ..model.teacher import TeacherNet, teacher_config
 
 # Everything about a junction that does not change during an episode. Stored once

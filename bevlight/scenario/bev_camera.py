@@ -38,8 +38,8 @@ Sizing the window is a two-sided problem, and both sides are handled here:
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Iterable, Sequence
 
 from ..paths import BEV_CAMERA_TABLE
 
@@ -205,6 +205,7 @@ def apply_junction_render_preset(junction: str, plan: str | None = None) -> str:
 def apply_junction_camera_overrides(junction: str, plan: str | None = None) -> None:
     """Patch the tshub BEV rigs in-place to this junction's solved window."""
     from dataclasses import replace
+
     from tshub.tshub_env3d.core.sensors import sensor_rig
 
     ortho = bev_ortho_size(junction, plan)

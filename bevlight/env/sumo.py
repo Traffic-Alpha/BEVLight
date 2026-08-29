@@ -42,8 +42,9 @@ def build_environment(junction: str, env_name: str, seed: int, num_seconds: int,
                       delta_time: int = DECISION_INTERVAL_S,
                       yellow_time: int = YELLOW_TIME_S):
     """A SUMO environment wired for phase-choice control, vehicles on, no renderer."""
-    from ..scenario.loader import load_junction_config
     from tshub.tshub_env.tshub_env import TshubEnvironment
+
+    from ..scenario.loader import load_junction_config
 
     cfg = load_junction_config(junction, env_name)
     env = TshubEnvironment(

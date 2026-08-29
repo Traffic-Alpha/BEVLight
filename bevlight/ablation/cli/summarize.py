@@ -97,12 +97,12 @@ def tabulate(loaded: dict, reference: str) -> None:
     for label, entry in loaded.items():
         m = entry["metrics"]
         if not m:
-            print(f"{label:{width}s} {str(entry['ablation'] or '-'):22s} "
+            print(f"{label:{width}s} {entry['ablation'] or '-'!s:22s} "
                   f"{'-':>4s}  no closed-loop results for this split")
             continue
         delta = entry["delta_travel_s"]
         mark = "reference" if label == reference else f"{delta:+.2f}s"
-        print(f"{label:{width}s} {str(entry['ablation'] or 'full'):22s} "
+        print(f"{label:{width}s} {entry['ablation'] or 'full'!s:22s} "
               f"{entry['scenarios']:4d} {m['avg_travel_time_s']:9.2f} "
               f"{m['avg_waiting_time_s']:8.2f} {m['avg_queue_veh']:7.2f} "
               f"{m['throughput']:6.0f} {mark:>9s}")

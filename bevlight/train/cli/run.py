@@ -13,8 +13,6 @@ means nothing.
 from __future__ import annotations
 
 import argparse
-import json
-from pathlib import Path
 
 from ...ablation.registry import describe, resolve
 from ...data.dataset import DecisionDataset

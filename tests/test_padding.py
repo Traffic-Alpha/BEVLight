@@ -56,6 +56,7 @@ def model():
 @pytest.mark.parametrize(
     "junction,plan", [("Beijing_Pinganli", "easy"), ("Hongkong_YMT", "normal")]
 )
+@pytest.mark.needs_scenarios
 def test_extra_padding_does_not_change_the_scores(model, junction, plan):
     """The core property: the same junction, padded two ways, scores the same."""
     tight = make_sample(junction, plan, 32, 12, 4)
@@ -71,6 +72,7 @@ def test_extra_padding_does_not_change_the_scores(model, junction, plan):
     )
 
 
+@pytest.mark.needs_scenarios
 def test_batching_with_a_bigger_junction_does_not_change_the_smaller(model):
     """A sample must not notice what else is in its batch."""
     small = make_sample("Hongkong_YMT", "normal", 48, 16, 6, seed=1)
@@ -87,6 +89,7 @@ def test_batching_with_a_bigger_junction_does_not_change_the_smaller(model):
 @pytest.mark.parametrize(
     "junction,plan", [("Beijing_Beihuan", "normal"), ("Beijing_Pinganli", "easy")]
 )
+@pytest.mark.needs_scenarios
 def test_padded_phases_are_unselectable(model, junction, plan):
     sample = make_sample(junction, plan, 48, 16, 6)
     with torch.no_grad():
@@ -100,6 +103,7 @@ def test_padded_phases_are_unselectable(model, junction, plan):
     assert torch.softmax(logits, dim=-1)[real:].sum() < 1e-9
 
 
+@pytest.mark.needs_scenarios
 def test_variable_phase_count_shares_one_model(model):
     """Junctions with K=3 and K=4 run through the same weights."""
     three = make_sample("Hongkong_YMT", "normal", 48, 16, 6)
@@ -111,6 +115,7 @@ def test_variable_phase_count_shares_one_model(model):
     assert out["logits"].shape == (2, 6)
 
 
+@pytest.mark.needs_scenarios
 def test_phase_pooling_is_permutation_invariant(model):
     """A phase is a set, so reordering its movements must change nothing."""
     sample = make_sample("Beijing_Pinganli", "easy", 48, 16, 6)
@@ -128,6 +133,7 @@ def test_phase_pooling_is_permutation_invariant(model):
     assert torch.allclose(a, b, atol=1e-5), "phase aggregation is order-dependent"
 
 
+@pytest.mark.needs_scenarios
 def test_lane_padding_does_not_leak_into_the_queue_head(model):
     sample = make_sample("Beijing_Pinganli", "easy", 48, 16, 6)
     with torch.no_grad():

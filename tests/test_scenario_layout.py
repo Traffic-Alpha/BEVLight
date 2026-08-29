@@ -45,6 +45,7 @@ def test_beihuan_contributes_one_plan_only():
     assert plans == {"normal"}
 
 
+@pytest.mark.needs_scenarios
 def test_every_active_scenario_resolves_to_a_real_sumocfg():
     for scenario in load_selection().all():
         cfg = load_junction_config(scenario.junction, scenario.env_name)

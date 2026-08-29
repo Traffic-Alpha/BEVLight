@@ -34,6 +34,7 @@ def make(junction: str, plan: str, action: int, seed: int = 0) -> dict:
     }
 
 
+@pytest.mark.needs_scenarios
 def test_a_label_pointing_at_a_padded_phase_is_rejected():
     """The failure this guards is silent: a misaligned label still trains."""
     batch = collate([make("Hongkong_YMT", "normal", action=5)])
@@ -42,6 +43,7 @@ def test_a_label_pointing_at_a_padded_phase_is_rejected():
         phase_cross_entropy(logits, batch["action"], batch["phase_valid"])
 
 
+@pytest.mark.needs_scenarios
 def test_padded_candidates_take_no_probability():
     torch.manual_seed(0)
     batch = collate([make("Hongkong_YMT", "normal", action=1)])
@@ -52,6 +54,7 @@ def test_padded_candidates_take_no_probability():
     assert torch.softmax(logits, dim=-1)[0, real:].sum() < 1e-9
 
 
+@pytest.mark.needs_scenarios
 def test_junctions_with_different_k_share_one_batch():
     """K=4 and K=3 together; each label is a position in its own candidate set."""
     batch = collate([
@@ -65,6 +68,7 @@ def test_junctions_with_different_k_share_one_batch():
     assert set(parts) >= {"ce", "queue", "occupancy", "total"}
 
 
+@pytest.mark.needs_scenarios
 def test_saturated_queue_labels_can_be_excluded():
     """A queue at the image edge is a lower bound, not a measurement."""
     sample = make("Beijing_Pinganli", "easy", action=0)
@@ -83,6 +87,7 @@ def test_masked_l1_ignores_invalid_lanes():
     assert float(masked_l1(prediction, target, valid)) == pytest.approx(0.0)
 
 
+@pytest.mark.needs_scenarios
 def test_auxiliary_weight_zero_reduces_to_pure_behaviour_cloning():
     batch = collate([make("Beijing_Pinganli", "easy", action=1)])
     torch.manual_seed(0)

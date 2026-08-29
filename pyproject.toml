@@ -47,5 +47,6 @@ target-version = "py310"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
+    "needs_scenarios: reads generated per-junction scenario data",
     "slow: needs a SUMO simulation; minutes rather than seconds",
 ]

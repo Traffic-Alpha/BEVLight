@@ -58,6 +58,7 @@ def teacher():
 
 @pytest.mark.parametrize("junction,plan", [("Beijing_Pinganli", "easy"),
                                            ("Hongkong_YMT", "normal")])
+@pytest.mark.needs_scenarios
 def test_extra_padding_does_not_change_the_scores(teacher, junction, plan):
     tight = make_observation(junction, plan, 32, 12, 4)
     loose = make_observation(junction, plan, 48, 16, 6)
@@ -67,6 +68,7 @@ def test_extra_padding_does_not_change_the_scores(teacher, junction, plan):
     assert torch.allclose(a, b, atol=1e-4), "padding changed the teacher's answer"
 
 
+@pytest.mark.needs_scenarios
 def test_padded_candidates_hold_no_probability(teacher):
     observation = make_observation("Beijing_Pinganli", "easy")
     batch = to_batch([observation], "cpu")
@@ -82,6 +84,7 @@ def test_padded_candidates_hold_no_probability(teacher):
     assert entropy.item() <= float(np.log(int(valid.sum()))) + 1e-5
 
 
+@pytest.mark.needs_scenarios
 def test_the_expectation_over_candidates_ignores_padding(teacher):
     """A sum over K must equal a sum over the real candidates, exactly."""
     observation = make_observation("Hongkong_YMT", "normal")
@@ -95,6 +98,7 @@ def test_the_expectation_over_candidates_ignores_padding(teacher):
     assert torch.allclose(full.squeeze(), real, atol=1e-5)
 
 
+@pytest.mark.needs_scenarios
 def test_the_buffer_returns_the_structure_the_transition_had():
     """Two junctions in one buffer must not be handed each other's wiring."""
     first = make_observation("Beijing_Pinganli", "easy", seed=1)
@@ -123,6 +127,7 @@ def test_the_buffer_returns_the_structure_the_transition_had():
                           torch.where(batch["reward"] == -2.0, 0.95, 0.857), atol=1e-6)
 
 
+@pytest.mark.needs_scenarios
 def test_the_lane_state_window_reaches_the_model(teacher):
     """Changing an earlier second must change the answer, or the window is dead."""
     observation = make_observation("Beijing_Pinganli", "easy", seed=3)

@@ -36,6 +36,7 @@ def vehicle(lane_id, lane_position, speed=0.0, length=5.0):
     }
 
 
+@pytest.mark.needs_scenarios
 def test_vehicles_beyond_the_window_are_not_counted(mask):
     """The whole point: a queue tail outside the image must not reach the label."""
     extractor = ObservationExtractor(mask, mask.tls_id)
@@ -51,6 +52,7 @@ def test_vehicles_beyond_the_window_are_not_counted(mask):
     assert obs.lanes[lane].vehicles == 1
 
 
+@pytest.mark.needs_scenarios
 def test_incoming_distance_is_measured_back_from_the_stop_line(mask):
     extractor = ObservationExtractor(mask, mask.tls_id)
     lane = mask.incoming_lane_ids()[0]
@@ -60,6 +62,7 @@ def test_incoming_distance_is_measured_back_from_the_stop_line(mask):
     assert extractor.distance_from_junction(lane, lane_length - 30.0) == pytest.approx(30.0)
 
 
+@pytest.mark.needs_scenarios
 def test_outgoing_distance_is_measured_forward_from_the_junction(mask):
     extractor = ObservationExtractor(mask, mask.tls_id)
     lane = mask.lane_ids("outgoing")[0]
@@ -67,6 +70,7 @@ def test_outgoing_distance_is_measured_forward_from_the_junction(mask):
     assert extractor.distance_from_junction(lane, 30.0) == pytest.approx(30.0)
 
 
+@pytest.mark.needs_scenarios
 def test_only_halting_vehicles_count_as_queued(mask):
     extractor = ObservationExtractor(mask, mask.tls_id)
     lane = mask.incoming_lane_ids()[0]
@@ -84,6 +88,7 @@ def test_only_halting_vehicles_count_as_queued(mask):
     assert obs.lanes[lane].queued == 1
 
 
+@pytest.mark.needs_scenarios
 def test_queue_saturation_is_flagged(mask):
     """When the queue reaches the image edge its true length is unknown."""
     extractor = ObservationExtractor(mask, mask.tls_id)
@@ -95,12 +100,14 @@ def test_queue_saturation_is_flagged(mask):
     assert lane in obs.saturated_lanes()
 
 
+@pytest.mark.needs_scenarios
 def test_lanes_outside_this_junction_are_ignored(mask):
     extractor = ObservationExtractor(mask, mask.tls_id)
     obs = extractor(fake_states(mask.tls_id, [vehicle("some_other_edge_0", 10.0)]))
     assert all(state.vehicles == 0 for state in obs.lanes.values())
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction", AVAILABLE_JUNCTIONS)
 def test_visible_stretch_is_contiguous_from_the_junction(junction):
     """`visible_length_m` divides clipped area by width.

@@ -35,6 +35,7 @@ def make_obs(plan: SignalPlan, queues: dict, phase: int = 0, time_in_phase: floa
     )
 
 
+@pytest.mark.needs_scenarios
 def test_max_pressure_picks_the_busiest_phase():
     plan = make_plan()
     target = plan.phases[-1]
@@ -43,6 +44,7 @@ def test_max_pressure_picks_the_busiest_phase():
     assert MaxPressure().act(obs, plan) == target
 
 
+@pytest.mark.needs_scenarios
 def test_max_pressure_holds_when_nothing_is_waiting():
     """Switching costs a yellow interval, so an empty junction should not churn."""
     plan = make_plan()
@@ -50,6 +52,7 @@ def test_max_pressure_holds_when_nothing_is_waiting():
     assert MaxPressure().act(obs, plan) == plan.phases[1]
 
 
+@pytest.mark.needs_scenarios
 def test_max_pressure_prefers_the_current_phase_on_a_tie():
     plan = make_plan()
     lanes = {plan.movement_in_lanes[plan.movements_of(p)[0]][0]: 4 for p in plan.phases}
@@ -57,6 +60,7 @@ def test_max_pressure_prefers_the_current_phase_on_a_tie():
     assert MaxPressure().act(obs, plan) == plan.phases[1]
 
 
+@pytest.mark.needs_scenarios
 def test_a_blocked_exit_suppresses_its_own_movement():
     """The point of pressure: releasing into a jam should not win."""
     plan = make_plan()
@@ -72,6 +76,7 @@ def test_a_blocked_exit_suppresses_its_own_movement():
     assert MaxPressure().act(blocked, plan) == b        # 6-6=0 loses to 5
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("controller", [FixedTime(30.0), MaxPressure()])
 def test_controllers_only_return_valid_phases(controller):
     plan = make_plan()
@@ -81,6 +86,7 @@ def test_controllers_only_return_valid_phases(controller):
         assert controller.act(obs, plan) in plan.phases
 
 
+@pytest.mark.needs_scenarios
 def test_fixed_time_advances_only_after_a_full_green():
     plan = make_plan()
     controller = FixedTime(30.0)
@@ -91,6 +97,7 @@ def test_fixed_time_advances_only_after_a_full_green():
     assert controller.act(due, plan) == plan.phases[1]
 
 
+@pytest.mark.needs_scenarios
 def test_fixed_time_cycles_through_every_phase():
     plan = make_plan()
     controller = FixedTime(30.0)
@@ -102,6 +109,7 @@ def test_fixed_time_cycles_through_every_phase():
     assert seen == set(plan.phases)
 
 
+@pytest.mark.needs_scenarios
 def test_variable_phase_count_is_read_from_the_plan():
     """K differs between the two plans of the same junction at YMT."""
     assert make_plan("Hongkong_YMT", "easy").num_phases == 4

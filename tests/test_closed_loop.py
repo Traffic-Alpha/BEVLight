@@ -74,6 +74,7 @@ class Obs:
         self.time = time
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction,plan_name", JUNCTIONS)
 def test_action_is_a_phase_this_junction_has(junction, plan_name):
     controller, plan = make_controller(junction, plan_name)
@@ -84,6 +85,7 @@ def test_action_is_a_phase_this_junction_has(junction, plan_name):
     assert action in plan.phases
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction,plan_name", JUNCTIONS)
 def test_a_short_window_repeats_the_earliest_frame(junction, plan_name):
     """The first decision of an episode must not be taken on zeros."""
@@ -101,6 +103,7 @@ def test_a_short_window_repeats_the_earliest_frame(junction, plan_name):
     assert np.all(features[:, real:] == 0.0)
 
 
+@pytest.mark.needs_scenarios
 def test_min_green_holds_the_current_phase():
     controller, plan = make_controller(*JUNCTIONS[1])
     for _ in range(WINDOW):
@@ -111,6 +114,7 @@ def test_min_green_holds_the_current_phase():
     assert controller.act(Obs(held, minimum - 1.0, 100.0), plan) == held
 
 
+@pytest.mark.needs_scenarios
 def test_frame_skipping_never_skips_a_frame_the_next_decision_reads():
     """The optimisation is only safe if the whole window survives it."""
     controller, plan = make_controller(*JUNCTIONS[1])

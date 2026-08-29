@@ -22,11 +22,13 @@ JUNCTIONS = list(AVAILABLE_JUNCTIONS)
 PAIRS = [(j, p) for j in JUNCTIONS for p in ("easy", "normal")]
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction", JUNCTIONS)
 def test_every_junction_has_a_mask_for_every_plan(junction):
     assert sorted(available_plans(junction)) == ["easy", "normal"]
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction,plan", PAIRS)
 def test_phase_count_matches_the_network(junction, plan):
     """The bug this guards: a mask built from one plan mislabels the other."""
@@ -37,12 +39,14 @@ def test_phase_count_matches_the_network(junction, plan):
     assert mask.num_phases == len(green_phases)
 
 
+@pytest.mark.needs_scenarios
 def test_plans_can_differ_in_phase_count():
     """Hongkong_YMT is the junction that makes variable K real: 4 vs 3."""
     assert load_lane_mask("Hongkong_YMT", "easy").num_phases == 4
     assert load_lane_mask("Hongkong_YMT", "normal").num_phases == 3
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction,plan", PAIRS)
 def test_phase_membership_agrees_between_lanes_and_tls(junction, plan):
     mask = load_lane_mask(junction, plan)
@@ -52,6 +56,7 @@ def test_phase_membership_agrees_between_lanes_and_tls(junction, plan):
                 assert phase in mask.phases_of(lane_id), (junction, plan, phase, lane_id)
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction,plan", PAIRS)
 def test_pixel_scale_is_the_same_everywhere(junction, plan):
     """Every junction must reach the model at one scale.
@@ -65,6 +70,7 @@ def test_pixel_scale_is_the_same_everywhere(junction, plan):
     assert scale == pytest.approx(bev_camera.PIXELS_PER_METER, rel=0.01)
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction,plan", PAIRS)
 def test_window_exposes_the_target_queue(junction, plan):
     mask = load_lane_mask(junction, plan)
@@ -73,6 +79,7 @@ def test_window_exposes_the_target_queue(junction, plan):
     assert mask.queue_capacity_vehicles >= target / bev_camera.JAM_SPACING_M - 0.2
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction,plan", PAIRS)
 def test_render_size_is_a_whole_number_of_vit_patches(junction, plan):
     width, height = load_lane_mask(junction, plan).resolution
@@ -80,6 +87,7 @@ def test_render_size_is_a_whole_number_of_vit_patches(junction, plan):
     assert width % bev_camera.PATCH_SIZE == 0
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction,plan", PAIRS)
 def test_mask_image_matches_its_declared_lanes(junction, plan):
     mask = load_lane_mask(junction, plan)
@@ -89,6 +97,7 @@ def test_mask_image_matches_its_declared_lanes(junction, plan):
         assert int(mask.pixels_of(record["lane_id"]).sum()) > 0
 
 
+@pytest.mark.needs_scenarios
 def test_guanghua_is_flagged_as_not_sharing_geometry():
     """Its two plans build different junction shapes, so they cannot share a mask."""
     meta = json.loads(
@@ -100,6 +109,7 @@ def test_guanghua_is_flagged_as_not_sharing_geometry():
     assert easy != normal
 
 
+@pytest.mark.needs_scenarios
 @pytest.mark.parametrize("junction", [j for j in JUNCTIONS if j != "Chengdu_Guanghua"])
 def test_other_junctions_do_share_geometry(junction):
     meta = json.loads(
@@ -108,6 +118,7 @@ def test_other_junctions_do_share_geometry(junction):
     assert meta["geometry_shared_across_plans"] is True
 
 
+@pytest.mark.needs_scenarios
 def test_loading_without_a_plan_is_impossible():
     with pytest.raises(TypeError):
         load_lane_mask("Beijing_Beihuan")

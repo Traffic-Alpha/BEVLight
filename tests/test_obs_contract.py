@@ -30,6 +30,7 @@ def test_the_default_spec_is_the_deployable_one():
     assert spec.deployable
 
 
+@pytest.mark.needs_scenarios
 def test_an_env_publishes_a_spec_matching_how_it_was_built():
     """Every environment carries its contract, whether or not one was passed."""
     env = JunctionEnv(JUNCTION, PLAN, DEMAND, seed=SEED, render=False)
@@ -43,6 +44,7 @@ def test_an_env_publishes_a_spec_matching_how_it_was_built():
     assert not wide.obs_spec.deployable
 
 
+@pytest.mark.needs_scenarios
 def test_a_spec_that_contradicts_its_keywords_is_refused():
     """Silently resolving the conflict would hide it in the results.
 
@@ -56,6 +58,7 @@ def test_a_spec_that_contradicts_its_keywords_is_refused():
                     obs_spec=ObsSpec(scope=ObsScope.WINDOW, mode=ObsMode.STATE))
 
 
+@pytest.mark.needs_scenarios
 def test_frames_come_from_the_spec_not_from_a_stale_keyword():
     """The window the buffers hold has to be the window the spec advertises."""
     env = JunctionEnv(JUNCTION, PLAN, DEMAND, seed=SEED, render=False,
@@ -81,6 +84,7 @@ def test_a_spec_round_trips_through_a_runs_config():
     assert ObsSpec(**spec.as_dict()) == spec
 
 
+@pytest.mark.needs_scenarios
 def test_every_registered_reward_is_accepted_by_the_environment():
     """The registry is the set of rewards, not a superset of what works."""
     for name in REWARDS:

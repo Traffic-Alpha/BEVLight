@@ -80,8 +80,9 @@ def parse_args(argv=None) -> argparse.Namespace:
                         help="Simulated seconds per episode. Default: the scenario's own.")
     parser.add_argument("--num-envs", type=int, default=16)
     parser.add_argument("--seed", type=int, default=7)
-    parser.add_argument("--log-every", type=int, default=5000,
-                        help="Record a history entry every N decisions.")
+    parser.add_argument("--log-every", type=int, default=2000,
+                        help="Record a history entry every N decisions. "
+                             "Dense on purpose: this is what a figure gets drawn from.")
     parser.add_argument("--eval-seeds", type=int, nargs="+", default=[7],
                         help="Seeds the policy and the baselines are both scored on.")
     parser.add_argument("--eval-scenarios", type=int, default=None,

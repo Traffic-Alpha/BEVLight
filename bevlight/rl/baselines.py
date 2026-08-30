@@ -249,22 +249,28 @@ def normalised_return(episodes, reference: dict[str, float]) -> float | None:
     return round(sum(ratios) / len(ratios), 4) if ratios else None
 
 
-def progress_callback(run_dir, every: int = 5000, started: float | None = None,
+def progress_callback(run_dir, every: int = 2000, started: float | None = None,
                       reward: str = "visible_queue"):
-    """Record what the run is doing, in the shape the results pipeline reads.
+    """Record what the run is doing, densely enough to plot.
 
-    A training run that prints nothing cannot be told from a hung one, and a
-    reward curve is the first thing anyone asks for. SB3 is silent at
-    `verbose=0` and writes no history of its own.
+    A training run that prints nothing cannot be told from a hung one, and SB3
+    is silent at `verbose=0` and writes no history of its own. What goes in
+    `history.json` is what a figure will be drawn from later, so it errs towards
+    keeping things: a point every couple of thousand decisions rather than every
+    ten, the raw return beside the normalised one, the per-scenario breakdown
+    behind both, and whatever the algorithm's own logger last computed.
 
-    Two numbers go in, not one. `return` is the raw pooled mean, which is what
-    SB3 would show and is not comparable across scenarios. `return_vs_max_pressure`
-    is the same episodes normalised by what max-pressure scores on each of them,
-    where 1.0 is parity -- that is the one worth watching, and it is None until
-    the reference table has been measured.
+    Three axes are recorded rather than one because they answer different
+    questions. `return` is what SB3 would show and is not comparable across
+    scenarios. `return_vs_max_pressure` divides each episode by what
+    max-pressure scores on that same scenario -- 1.0 is parity, larger is worse,
+    and it is the one to watch. `return_by_scenario` keeps the same episodes
+    unaggregated, which is the only way to see a curve that improves on average
+    while one junction gets worse.
     """
     import json
     import time
+    from collections import defaultdict
 
     from stable_baselines3.common.callbacks import BaseCallback
 
@@ -277,6 +283,34 @@ def progress_callback(run_dir, every: int = 5000, started: float | None = None,
             super().__init__()
             self.history: list[dict] = []
             self.next_at = every
+
+        def _by_scenario(self, episodes) -> dict:
+            grouped = defaultdict(list)
+            for episode in episodes:
+                key = episode.get("scenario")
+                if key:
+                    grouped[key].append(episode)
+            return {
+                key: {
+                    "episodes": len(rows),
+                    "return": round(sum(e["r"] for e in rows) / len(rows), 4),
+                    "vs_max_pressure": normalised_return(rows, reference),
+                }
+                for key, rows in sorted(grouped.items())
+            }
+
+        def _algorithm_metrics(self) -> dict:
+            """Whatever SB3 last computed -- losses, entropy, explained variance.
+
+            The names differ by algorithm and change between releases, so this
+            takes what is there rather than asking for a fixed set.
+            """
+            values = getattr(self.model.logger, "name_to_value", {}) or {}
+            return {
+                key.split("/", 1)[-1]: round(float(value), 6)
+                for key, value in values.items()
+                if key.startswith("train/") and isinstance(value, (int, float))
+            }
 
         def _on_step(self) -> bool:
             if self.num_timesteps < self.next_at:
@@ -296,6 +330,8 @@ def progress_callback(run_dir, every: int = 5000, started: float | None = None,
                                    if episodes else None),
                 "elapsed_s": round(elapsed, 1),
                 "steps_per_s": round(self.num_timesteps / max(1e-9, elapsed), 1),
+                "algorithm": self._algorithm_metrics(),
+                "return_by_scenario": self._by_scenario(episodes),
             }
             self.history.append(entry)
             history_path.write_text(json.dumps(self.history, indent=2))
@@ -303,7 +339,7 @@ def progress_callback(run_dir, every: int = 5000, started: float | None = None,
             shown = "n/a" if ratio is None else f"{ratio:.2f}x mp cost"
             raw = "n/a" if entry["return"] is None else f"{entry['return']:+.2f}"
             print(f"[train] {entry['steps']:>7} steps  {entry['episodes']:>4} eps  "
-                  f"{entry['scenarios_seen']:>2} scen  raw {raw:>9}  {shown:>10}  "
+                  f"{entry['scenarios_seen']:>2} scen  raw {raw:>10}  {shown:>14}  "
                   f"{entry['steps_per_s']:.1f}/s  {entry['elapsed_s'] / 60:.1f} min",
                   flush=True)
             return True
@@ -316,12 +352,12 @@ def controller_rollout(spec: str, junction: str, plan: str, demand: str,
                        cache_dir: Path | None = None) -> dict:
     """One rule-based episode, remembered on disk.
 
-    The baseline table is a grid of algorithms against rewards, and every cell
-    of it is scored against the same `max_pressure` and `fixed_time` on the same
-    scenarios and seeds. Recomputing those is the largest single waste in the
-    experiment: twelve cells over ninety-one scenarios is two thousand baseline
-    episodes where a hundred and eighty distinct ones exist. The controller
-    itself is arithmetic; the ten to fifteen seconds is SUMO, whoever is driving.
+    Every cell of the grid is scored against the same `max_pressure` and
+    `fixed_time` on the same scenarios and seeds. Recomputing those is the
+    largest single waste in the experiment: twelve cells over ninety-one
+    scenarios is two thousand baseline episodes where a hundred and eighty
+    distinct ones exist. The controller itself is arithmetic; the ten seconds is
+    SUMO, whoever is driving.
 
     The reward is deliberately not part of the key, which looks like an omission
     and is a decision. A rule-based controller does not read the reward,
@@ -348,10 +384,9 @@ def controller_rollout(spec: str, junction: str, plan: str, demand: str,
         spec, junction, plan, demand, seed, "visible_queue", steps
     )
     # Written through a temporary file in the same directory and renamed, which
-    # is atomic on one filesystem. Cells of the grid run in parallel and two of
-    # them can want the same baseline at the same time; both computing it is
-    # merely wasteful, but a reader seeing a half-written file is a crash in
-    # something that was supposed to be a cache hit.
+    # is atomic on one filesystem. Cells run in parallel and two of them can want
+    # the same baseline at the same time; both computing it is merely wasteful,
+    # but a reader seeing a half-written file is a crash in a cache hit.
     cache_dir.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(f".{os.getpid()}.tmp")
     temporary.write_text(json.dumps(summary, indent=2))

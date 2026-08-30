@@ -93,7 +93,27 @@ def make_env(junction: str, plan: str, demand: str, *, reward: str, seed: int,
     )
 
 
-def build(algorithm: Algorithm, env, *, seed: int, **hyperparameters):
+def structured_policy(algorithm: Algorithm):
+    """The hierarchy as this algorithm's network.
+
+    `--policy structured` is the arm that answers whether the cross-junction
+    collapse is the algorithms or the network they were given: same environment,
+    same reward, same budget, and the only difference is whether the phase's
+    representation is gathered from the lanes it serves or read off a flat
+    vector by index.
+    """
+    from ._internal.structured import (
+        structured_actor_critic_policy,
+        structured_dqn_policy,
+    )
+
+    if algorithm.off_policy:
+        return structured_dqn_policy()
+    return structured_actor_critic_policy(masked=algorithm.masked)
+
+
+def build(algorithm: Algorithm, env, *, seed: int, policy: str = "flat",
+          **hyperparameters):
     """The published implementation with its published defaults.
 
     Deliberately not tuned. A baseline tuned by us and beaten by us proves
@@ -132,8 +152,10 @@ def build(algorithm: Algorithm, env, *, seed: int, **hyperparameters):
         stock = algorithm.stock_n_steps
         if stock and stock // num_envs >= 1:
             hyperparameters["n_steps"] = stock // num_envs
+    chosen = (structured_policy(algorithm) if policy == "structured"
+              else algorithm.policy)
     return algorithm.load_class()(
-        algorithm.policy, env, seed=seed, verbose=0, **hyperparameters
+        chosen, env, seed=seed, verbose=0, **hyperparameters
     )
 
 

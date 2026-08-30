@@ -28,7 +28,9 @@ import numpy as np
 
 from ..data.collate import (
     MAX_LANES,
+    MAX_LANES_PER_MOVEMENT,
     MAX_MOVEMENTS,
+    MAX_MOVEMENTS_PER_PHASE,
     MAX_PHASES,
     phase_lane_incidence,
 )
@@ -112,7 +114,10 @@ class JunctionGymEnv:
             "incoming_valid": gym.spaces.Box(0, 1, (MAX_LANES,), np.float32),
             "movement_valid": gym.spaces.Box(0, 1, (MAX_MOVEMENTS,), np.float32),
             "phase_valid": gym.spaces.Box(0, 1, (MAX_PHASES,), np.float32),
-            "current_phase": gym.spaces.Discrete(MAX_PHASES),
+            # A Box holding an index, not a Discrete. SB3 one-hot encodes a
+            # Discrete observation, and the structured network wants the index
+            # itself: it gathers with it rather than embedding it.
+            "current_phase": gym.spaces.Box(0, MAX_PHASES - 1, (1,), np.int64),
             "time_in_phase": gym.spaces.Box(0, np.inf, (1,), np.float32),
             # What each action actually *does*: row p is the lanes phase p
             # releases. The wiring is otherwise stored as gather indices, which
@@ -126,6 +131,24 @@ class JunctionGymEnv:
                 0, np.inf, (MAX_PHASES, MAX_LANES), np.float32),
             "phase_lane_out": gym.spaces.Box(
                 0, np.inf, (MAX_PHASES, MAX_LANES), np.float32),
+            # The wiring as the model's own hierarchy consumes it: gather
+            # indices, not a flattened matrix. A network that pools lanes into
+            # movements and movements into phases reads these directly, and a
+            # phase's representation is then built from the lanes that phase
+            # actually serves -- which is what lets an unseen plan mean
+            # something rather than being a phase id it has never seen.
+            "movement_in_index": gym.spaces.Box(
+                0, MAX_LANES, (MAX_MOVEMENTS, MAX_LANES_PER_MOVEMENT), np.int64),
+            "movement_in_weight": gym.spaces.Box(
+                0, 1, (MAX_MOVEMENTS, MAX_LANES_PER_MOVEMENT), np.float32),
+            "movement_out_index": gym.spaces.Box(
+                0, MAX_LANES, (MAX_MOVEMENTS, MAX_LANES_PER_MOVEMENT), np.int64),
+            "movement_out_weight": gym.spaces.Box(
+                0, 1, (MAX_MOVEMENTS, MAX_LANES_PER_MOVEMENT), np.float32),
+            "phase_members": gym.spaces.Box(
+                0, MAX_MOVEMENTS, (MAX_PHASES, MAX_MOVEMENTS_PER_PHASE), np.int64),
+            "phase_member_valid": gym.spaces.Box(
+                0, 1, (MAX_PHASES, MAX_MOVEMENTS_PER_PHASE), np.float32),
         }
         if self.obs_mode == "features":
             spaces["lane_features"] = gym.spaces.Box(
@@ -147,6 +170,9 @@ class JunctionGymEnv:
         packed.update(getattr(self, "_wiring", {}))
         packed["time_in_phase"] = np.array(
             [observation.get("time_in_phase", 0.0)], dtype=np.float32
+        )
+        packed["current_phase"] = np.array(
+            [observation.get("current_phase", 0)], dtype=np.int64
         )
         extra = {k: v for k, v in observation.items() if k not in declared}
         return packed, {**info, **extra,

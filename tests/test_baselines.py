@@ -329,3 +329,76 @@ def test_the_incidence_covers_only_phases_the_plan_has():
     for phase in range(mask.num_phases, incidence.shape[0]):
         assert incidence[phase].sum() == 0
     assert incidence[: mask.num_phases].sum() > 0
+
+
+def structured_observation(batch: int = 2):
+    """A batch shaped exactly as the environment publishes one."""
+    import numpy as np
+    import torch
+
+    from bevlight.data.collate import (
+        MAX_LANES,
+        MAX_LANES_PER_MOVEMENT,
+        MAX_MOVEMENTS,
+        MAX_MOVEMENTS_PER_PHASE,
+        MAX_PHASES,
+    )
+    from bevlight.env.gym_env import LANE_STATE_CHANNELS
+
+    rng = np.random.default_rng(7)
+    valid_lanes, valid_phases = 12, 3
+    lane_valid = np.zeros((batch, MAX_LANES), np.float32)
+    lane_valid[:, :valid_lanes] = 1
+    phase_valid = np.zeros((batch, MAX_PHASES), np.float32)
+    phase_valid[:, :valid_phases] = 1
+    movement_valid = np.zeros((batch, MAX_MOVEMENTS), np.float32)
+    movement_valid[:, :4] = 1
+    return {
+        "lane_state": torch.tensor(rng.uniform(
+            0, 5, (batch, 5, MAX_LANES, len(LANE_STATE_CHANNELS))).astype(np.float32)),
+        "lane_valid": torch.tensor(lane_valid),
+        "incoming_valid": torch.tensor(lane_valid),
+        "movement_valid": torch.tensor(movement_valid),
+        "phase_valid": torch.tensor(phase_valid),
+        "current_phase": torch.zeros((batch, 1), dtype=torch.int64),
+        "time_in_phase": torch.full((batch, 1), 12.0),
+        "movement_in_index": torch.zeros(
+            (batch, MAX_MOVEMENTS, MAX_LANES_PER_MOVEMENT), dtype=torch.int64),
+        "movement_in_weight": torch.zeros(
+            (batch, MAX_MOVEMENTS, MAX_LANES_PER_MOVEMENT)),
+        "movement_out_index": torch.zeros(
+            (batch, MAX_MOVEMENTS, MAX_LANES_PER_MOVEMENT), dtype=torch.int64),
+        "movement_out_weight": torch.zeros(
+            (batch, MAX_MOVEMENTS, MAX_LANES_PER_MOVEMENT)),
+        "phase_members": torch.zeros(
+            (batch, MAX_PHASES, MAX_MOVEMENTS_PER_PHASE), dtype=torch.int64),
+        "phase_member_valid": torch.zeros(
+            (batch, MAX_PHASES, MAX_MOVEMENTS_PER_PHASE)),
+        "phase_lane_in": torch.zeros((batch, MAX_PHASES, MAX_LANES)),
+        "phase_lane_out": torch.zeros((batch, MAX_PHASES, MAX_LANES)),
+    }
+
+
+def test_the_structured_trunk_scores_only_the_phases_the_junction_has():
+    """Padded candidates leave at -inf, so an unavailable action is never argmax."""
+    pytest.importorskip("torch")
+    from bevlight.data.collate import MAX_PHASES
+    from bevlight.rl._internal.structured import StructuredTrunk
+
+    scores = StructuredTrunk().scores(structured_observation())
+    assert scores.shape == (2, MAX_PHASES)
+    assert bool((scores[:, 3:] < -1e8).all()), "padded phases took a finite score"
+    assert bool((scores[:, :3] > -1e8).all())
+
+
+def test_the_batch_conversion_keeps_gather_indices_integral():
+    """A float `gather` index is a silent wrong answer, not an error."""
+    pytest.importorskip("torch")
+    from bevlight.rl._internal.structured import as_batch
+
+    observation = structured_observation()
+    observation["phase_members"] = observation["phase_members"].float()
+    batch = as_batch(observation)
+    assert batch["phase_members"].dtype.is_floating_point is False
+    assert batch["current_phase"].dim() == 1, "the decision layer indexes with it"
+    assert batch["time_in_phase"].dim() == 1

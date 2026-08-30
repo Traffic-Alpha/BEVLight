@@ -92,6 +92,12 @@ def parse_args(argv=None) -> argparse.Namespace:
                              "reported number should use: all of them.")
     parser.add_argument("--baseline", nargs="+", default=["max_pressure", "fixed_time"],
                         help="Rule-based controllers to pair against.")
+    parser.add_argument("--policy", default="structured",
+                        choices=("structured", "flat"),
+                        help="`structured` gathers lanes into movements into "
+                             "phases, as the model does; `flat` is SB3's MLP over "
+                             "the whole observation, which can only learn a phase "
+                             "index by heart.")
     parser.add_argument("--resume", default=None,
                         help="Continue from a saved model.zip instead of starting "
                              "over. --steps is then the *additional* budget, and "
@@ -268,7 +274,8 @@ def main(argv=None) -> int:
             print(f"[train] continuing from {args.resume}")
             model = resume(algorithm, args.resume, envs, seed=args.seed)
         else:
-            model = build(algorithm, envs, seed=args.seed)
+            model = build(algorithm, envs, seed=args.seed,
+                          policy=args.policy)
         model.learn(total_timesteps=args.steps, progress_bar=False,
                     reset_num_timesteps=not args.resume,
                     callback=progress_callback(run_dir, args.log_every, started,
@@ -283,6 +290,7 @@ def main(argv=None) -> int:
     result = {
         "algorithm": args.algo, "reward": args.reward, "observe": args.observe,
         "masked": algorithm.masked,
+        "policy": args.policy,
         "normalize_reward": bool(args.normalize_reward), "steps": args.steps, "seed": args.seed,
         "train_split": args.train_split, "train_scenarios": len(training),
         "train_junctions": sorted({s.junction for s in training}),

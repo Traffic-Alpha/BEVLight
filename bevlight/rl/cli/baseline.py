@@ -28,6 +28,7 @@ from ..baselines import (
     controller_rollout,
     progress_callback,
     resolve,
+    resume,
     reward_reference,
     rollout,
 )
@@ -91,6 +92,10 @@ def parse_args(argv=None) -> argparse.Namespace:
                              "reported number should use: all of them.")
     parser.add_argument("--baseline", nargs="+", default=["max_pressure", "fixed_time"],
                         help="Rule-based controllers to pair against.")
+    parser.add_argument("--resume", default=None,
+                        help="Continue from a saved model.zip instead of starting "
+                             "over. --steps is then the *additional* budget, and "
+                             "the step counter and exploration schedule carry on.")
     parser.add_argument("--run", default=None,
                         help="Run directory name. Default: <algo>_<reward>_<train split>.")
     parser.add_argument("--dry-run", action="store_true",
@@ -259,8 +264,13 @@ def main(argv=None) -> int:
     )
     started = time.time()
     try:
-        model = build(algorithm, envs, seed=args.seed)
+        if args.resume:
+            print(f"[train] continuing from {args.resume}")
+            model = resume(algorithm, args.resume, envs, seed=args.seed)
+        else:
+            model = build(algorithm, envs, seed=args.seed)
         model.learn(total_timesteps=args.steps, progress_bar=False,
+                    reset_num_timesteps=not args.resume,
                     callback=progress_callback(run_dir, args.log_every, started,
                                               args.reward))
         model.save(run_dir / "model")

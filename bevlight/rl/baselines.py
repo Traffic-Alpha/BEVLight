@@ -137,6 +137,24 @@ def build(algorithm: Algorithm, env, *, seed: int, **hyperparameters):
     )
 
 
+def resume(algorithm: Algorithm, path, env, *, seed: int, **hyperparameters):
+    """Pick a saved model back up rather than paying for its first steps again.
+
+    A cell whose curve had not settled needs a longer budget, and starting over
+    throws away everything already bought -- five cells at three hundred thousand
+    steps is an hour and a half of SUMO to re-simulate for no new information.
+
+    The environment is rebound because a loaded model carries the *shape* of the
+    one it was trained against, not the live one. `reset_num_timesteps=False` at
+    the call site is what makes the continued run's step counter and its
+    exploration schedule pick up where they stopped instead of restarting.
+    """
+    model = algorithm.load_class().load(str(path), env=env, seed=seed,
+                                        **hyperparameters)
+    model.set_env(env)
+    return model
+
+
 def predict(model, algorithm: Algorithm, observation, env) -> int:
     """One greedy action, with the mask if the implementation can take one."""
     if algorithm.masked:
@@ -281,7 +299,13 @@ def progress_callback(run_dir, every: int = 2000, started: float | None = None,
     class Progress(BaseCallback):
         def __init__(self):
             super().__init__()
-            self.history: list[dict] = []
+            # Continue the file rather than replace it. A resumed run is the
+            # same run with a longer budget, and the curve a figure needs is the
+            # whole of it, not the tail.
+            try:
+                self.history = json.loads(history_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                self.history = []
             self.next_at = every
 
         def _by_scenario(self, episodes) -> dict:

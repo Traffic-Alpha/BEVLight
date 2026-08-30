@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 
 from ...env.rewards import REWARDS
@@ -217,6 +218,30 @@ def report(name: str, row: dict, args) -> None:
               f"than the best baseline; travel time is not comparable here.")
 
 
+def provenance() -> dict:
+    """What produced this result: the commit, and whether the tree was dirty.
+
+    A number in a paper has to be attributable to a version of the code. Without
+    this a run says what it measured and not what it measured it with, and the
+    first time a result is questioned there is nothing to check it against.
+    """
+    import subprocess
+
+    def git(*args) -> str:
+        try:
+            return subprocess.run(["git", *args], capture_output=True, text=True,
+                                  timeout=10).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            return ""
+
+    return {
+        "commit": git("rev-parse", "HEAD"),
+        "branch": git("rev-parse", "--abbrev-ref", "HEAD"),
+        "dirty": bool(git("status", "--porcelain", "bevlight")),
+        "command": " ".join(sys.argv),
+    }
+
+
 def main(argv=None) -> int:
     args = parse_args(argv)
     algorithm = resolve(args.algo)
@@ -294,7 +319,8 @@ def main(argv=None) -> int:
         "normalize_reward": bool(args.normalize_reward), "steps": args.steps, "seed": args.seed,
         "train_split": args.train_split, "train_scenarios": len(training),
         "train_junctions": sorted({s.junction for s in training}),
-        "train_minutes": round(trained_s / 60, 2), "eval": {},
+        "train_minutes": round(trained_s / 60, 2),
+        "provenance": provenance(), "eval": {},
     }
     for split, rows in evaluation.items():
         print(f"\n[score] {split}: {len(rows)} scenarios x {len(args.eval_seeds)} seeds")

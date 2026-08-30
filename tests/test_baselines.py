@@ -289,3 +289,43 @@ def test_the_key_two_lookups_join_on_is_the_scenarios_own():
 
     scenario = Scenario("Hongkong_YMT", "normal", "high_density", "train")
     assert scenario_key("Hongkong_YMT", "normal", "high_density") == scenario.key
+
+
+def test_a_phase_id_means_different_lanes_under_a_different_plan():
+    """The reason a policy without the wiring cannot cross plans.
+
+    At Hongkong_YMT action 0 releases six lanes under `normal` and three
+    entirely different ones under `easy`. A network shown only lane queues and a
+    phase index has to learn that association from experience, and what it
+    learns is true of one (junction, plan) and wrong for the next -- which is a
+    memorised phase id, and is what a cross-plan evaluation collapses on.
+    """
+    from bevlight.data.collate import junction_structure, phase_lane_incidence
+    from bevlight.scenario.lane_mask import load_lane_mask
+
+    matrices = {
+        plan: phase_lane_incidence(
+            junction_structure(load_lane_mask("Hongkong_YMT", plan))
+        )
+        for plan in ("normal", "easy")
+    }
+    served = {plan: {i for i, w in enumerate(m[0]) if w > 0}
+              for plan, m in matrices.items()}
+    assert served["normal"] != served["easy"], (
+        "if action 0 served the same lanes under both plans there would be "
+        "nothing for a policy to get wrong"
+    )
+    assert matrices["normal"].shape == matrices["easy"].shape
+
+
+def test_the_incidence_covers_only_phases_the_plan_has():
+    """Padded phases release nothing, so an unused action row is all zeros."""
+    from bevlight.data.collate import junction_structure, phase_lane_incidence
+    from bevlight.scenario.lane_mask import load_lane_mask
+
+    mask = load_lane_mask("Hongkong_YMT", "normal")
+    structure = junction_structure(mask)
+    incidence = phase_lane_incidence(structure)
+    for phase in range(mask.num_phases, incidence.shape[0]):
+        assert incidence[phase].sum() == 0
+    assert incidence[: mask.num_phases].sum() > 0

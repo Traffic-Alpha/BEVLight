@@ -26,7 +26,12 @@ from functools import lru_cache
 
 import numpy as np
 
-from ..data.collate import MAX_LANES, MAX_MOVEMENTS, MAX_PHASES
+from ..data.collate import (
+    MAX_LANES,
+    MAX_MOVEMENTS,
+    MAX_PHASES,
+    phase_lane_incidence,
+)
 from .gym_env import LANE_STATE_CHANNELS, JunctionEnv
 
 
@@ -109,6 +114,18 @@ class JunctionGymEnv:
             "phase_valid": gym.spaces.Box(0, 1, (MAX_PHASES,), np.float32),
             "current_phase": gym.spaces.Discrete(MAX_PHASES),
             "time_in_phase": gym.spaces.Box(0, np.inf, (1,), np.float32),
+            # What each action actually *does*: row p is the lanes phase p
+            # releases. The wiring is otherwise stored as gather indices, which
+            # a flat network cannot read -- to an MLP an index is a number whose
+            # magnitude means nothing -- so without this a policy has to learn
+            # "action 2 shortens lanes 5, 6 and 12" from experience, which is a
+            # memorised phase id and is wrong the moment the plan changes. At
+            # Hongkong_YMT action 0 releases six lanes under `normal` and three
+            # different ones under `easy`.
+            "phase_lane_in": gym.spaces.Box(
+                0, np.inf, (MAX_PHASES, MAX_LANES), np.float32),
+            "phase_lane_out": gym.spaces.Box(
+                0, np.inf, (MAX_PHASES, MAX_LANES), np.float32),
         }
         if self.obs_mode == "features":
             spaces["lane_features"] = gym.spaces.Box(
@@ -125,6 +142,9 @@ class JunctionGymEnv:
         """Keep the keys the space declares; the rest travels in `info`."""
         declared = set(self.observation_space.spaces)
         packed = {k: v for k, v in observation.items() if k in declared}
+        # Static for the (junction, plan) this episode runs, so it is composed
+        # once at reset rather than at every step.
+        packed.update(getattr(self, "_wiring", {}))
         packed["time_in_phase"] = np.array(
             [observation.get("time_in_phase", 0.0)], dtype=np.float32
         )
@@ -158,6 +178,10 @@ class JunctionGymEnv:
                                self.inner.demand)
             self._scale = abs(self.reward_scale.get(key, 1.0)) or 1.0
         observation, _, _, info = self.inner.reset()
+        self._wiring = {
+            f"phase_lane_{side}": phase_lane_incidence(self.inner._structure, side)
+            for side in ("in", "out")
+        }
         return self._pack(observation, info)
 
     def step(self, action):

@@ -45,11 +45,34 @@ class Algorithm:
     #: SB3's own `n_steps` default, which is *per environment*. None for
     #: off-policy algorithms, which have no rollout buffer.
     stock_n_steps: int | None = None
+    #: Settings this task needs that SB3's defaults do not supply. Not tuning:
+    #: SB3's defaults are calibrated for continuous control, and these are the
+    #: values its own Atari configuration uses for a discrete action space.
+    defaults: dict | None = None
 
     def load_class(self):
         import importlib
 
         return getattr(importlib.import_module(self.module), self.attribute)
+
+
+#: What a discrete action space needs and SB3's defaults do not give it. These
+#: are the values SB3's own Atari configuration uses, not values tuned against
+#: this task's results.
+#:
+#: `ent_coef` is the one that matters most. At the default 0.0 nothing pushes a
+#: categorical policy to stay exploratory, and this one did not become decisive
+#: at all: its entropy sat at 1.02 after two hundred thousand steps against 1.19
+#: for a uniform policy over the same mix of three- and four-phase junctions.
+#:
+#: `n_epochs` drops from ten to four because ten passes over one rollout is what
+#: drove `clip_fraction` to 0.22 -- the policy trying to move and being held back
+#: on a fifth of its samples.
+DISCRETE_ON_POLICY = {
+    "ent_coef": 0.01,
+    "n_epochs": 4,
+    "batch_size": 256,
+}
 
 
 #: Name -> implementation. The name is what `--algo` takes and what a run's
@@ -60,11 +83,13 @@ ALGORITHMS = {
         Algorithm("dqn", "stable_baselines3", "DQN", "MultiInputPolicy",
                   masked=False, off_policy=True),
         Algorithm("ppo", "stable_baselines3", "PPO", "MultiInputPolicy",
-                  masked=False, off_policy=False, stock_n_steps=2048),
+                  masked=False, off_policy=False, stock_n_steps=2048,
+                  defaults=DISCRETE_ON_POLICY),
         Algorithm("a2c", "stable_baselines3", "A2C", "MultiInputPolicy",
                   masked=False, off_policy=False, stock_n_steps=5),
         Algorithm("maskable_ppo", "sb3_contrib", "MaskablePPO", "MultiInputPolicy",
-                  masked=True, off_policy=False, stock_n_steps=2048),
+                  masked=True, off_policy=False, stock_n_steps=2048,
+                  defaults=DISCRETE_ON_POLICY),
     )
 }
 
@@ -148,6 +173,8 @@ def build(algorithm: Algorithm, env, *, seed: int, policy: str = "flat",
     num_envs = getattr(env, "num_envs", 1)
     if algorithm.off_policy and "gradient_steps" not in hyperparameters:
         hyperparameters["gradient_steps"] = num_envs
+    for key, value in (algorithm.defaults or {}).items():
+        hyperparameters.setdefault(key, value)
     if not algorithm.off_policy and "n_steps" not in hyperparameters:
         stock = algorithm.stock_n_steps
         if stock and stock // num_envs >= 1:

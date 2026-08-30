@@ -293,6 +293,24 @@ def main(argv=None) -> int:
         render=False, allow_any_scenario=True, reward=args.reward,
         observe=args.observe, num_seconds=args.episode_steps,
     )
+    if not algorithm.off_policy:
+        # An actor-critic loss is `policy + 0.5 * value`, and this task's returns
+        # run to -110 (to -800 on full_wait) where Atari's are clipped to O(1).
+        # Measured on the first pass: policy_gradient_loss 0.01 against
+        # value_loss 27, so a thousandth of the gradient signal was training the
+        # policy and its entropy never left uniform. VecNormalize divides the
+        # reward by a running standard deviation of the return, which is what
+        # Atari's reward clipping does for the same reason.
+        #
+        # `norm_obs=False` is not an omission. The observation carries integer
+        # gather indices, and a running mean subtracted from `phase_members`
+        # would index the wrong movements.
+        from stable_baselines3.common.vec_env import VecNormalize
+
+        envs = VecNormalize(envs, norm_obs=False, norm_reward=True)
+        print("[plan] returns normalised for the actor-critic loss "
+              "(observations left alone: they carry gather indices)")
+
     started = time.time()
     try:
         if args.resume:

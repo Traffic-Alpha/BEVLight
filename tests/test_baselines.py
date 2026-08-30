@@ -402,3 +402,30 @@ def test_the_batch_conversion_keeps_gather_indices_integral():
     assert batch["phase_members"].dtype.is_floating_point is False
     assert batch["current_phase"].dim() == 1, "the decision layer indexes with it"
     assert batch["time_in_phase"].dim() == 1
+
+
+def test_a_discrete_on_policy_baseline_gets_what_a_discrete_task_needs():
+    """SB3's defaults are calibrated for continuous control, not for this.
+
+    `ent_coef=0.0` leaves nothing pushing a categorical policy to stay
+    exploratory, and the first pass measured the consequence: entropy sat at
+    1.02 after two hundred thousand steps against 1.19 for a policy still
+    uniform over the same mix of three- and four-phase junctions. These are the
+    values SB3's own Atari configuration uses, not values tuned against results.
+    """
+    for name in ("ppo", "maskable_ppo"):
+        built = built_kwargs(name, 16)
+        assert built["ent_coef"] == 0.01
+        assert built["n_epochs"] == 4
+        assert built["batch_size"] == 256
+
+
+def test_the_off_policy_baseline_is_left_at_its_own_defaults():
+    """DQN has no policy loss to be drowned by a value loss, so none of it applies."""
+    built = built_kwargs("dqn", 16)
+    for key in ("ent_coef", "n_epochs", "batch_size"):
+        assert key not in built
+
+
+def test_an_explicit_setting_still_wins():
+    assert built_kwargs("ppo", 16, ent_coef=0.05)["ent_coef"] == 0.05

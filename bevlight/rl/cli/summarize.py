@@ -20,6 +20,7 @@ import argparse
 import json
 
 from ...paths import TRAIN_RUNS_ROOT
+from ..baselines import converged
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -38,12 +39,25 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 
 def load(root) -> list[dict]:
+    """Each finished run, with the verdict on whether its curve had settled.
+
+    A row whose curve was still descending is a statement about the training
+    budget rather than about the algorithm, and putting it in a table without
+    saying so is the mistake this column exists to prevent.
+    """
     rows = []
     for path in sorted(root.glob("*/baseline.json")):
         try:
-            rows.append(json.loads(path.read_text()))
+            run = json.loads(path.read_text())
         except json.JSONDecodeError:
             print(f"[skip] {path} is not readable yet")
+            continue
+        history_path = path.parent / "history.json"
+        run["convergence"] = (
+            converged(json.loads(history_path.read_text()))
+            if history_path.is_file() else {"converged": None, "reason": "no history"}
+        )
+        rows.append(run)
     return rows
 
 
@@ -62,8 +76,8 @@ def main(argv=None) -> int:
     print(f"{len(runs)} runs from {root}\n")
     for split in splits:
         print(f"=== {split}")
-        print(f"  {'algorithm':<14} {'reward':<16} {'mask':>5} {'travel*':>9} "
-              f"{'vs mp median':>13} {'range':>22} {'wins':>8} {'clears':>7}")
+        print(f"  {'algorithm':<14} {'reward':<16} {'steps':>7} {'conv':>5} "
+              f"{'travel*':>9} {'vs mp median':>13} {'wins':>8} {'clears':>7}")
         rows = []
         for run in runs:
             block = run.get("eval", {}).get(split)
@@ -74,16 +88,21 @@ def main(argv=None) -> int:
         for _, run, block, entry in sorted(rows):
             shortfall = block.get("throughput_shortfall", 0.0)
             flag = "" if block.get("comparable") else "  <- not comparable"
-            print(f"  {run['algorithm']:<14} {run['reward']:<16} "
-                  f"{'yes' if run['masked'] else 'no':>5} "
+            verdict = run["convergence"].get("converged")
+            mark = {True: "yes", False: "NO", None: "?"}[verdict]
+            reward = run["reward"] + ("*" if run.get("normalize_reward") else "")
+            print(f"  {run['algorithm']:<14} {reward:<16} {run['steps']:>7} "
+                  f"{mark:>5} "
                   f"{block['policy']['avg_travel_time_incl_unfinished_s']:9.2f} "
                   f"{entry['median_delta_travel_incl']:+13.2f} "
-                  f"{'[' + format(entry['best_delta_travel_incl'], '+.1f') + ', ' + format(entry['worst_delta_travel_incl'], '+.1f') + ']':>22} "
                   f"{entry['wins']:>4}/{block['episodes']:<3} "
                   f"{1 - shortfall:>6.0%}{flag}")
         print()
 
     print("travel* counts stranded vehicles at their time so far.")
+    print("conv = the training curve had settled: the last quarter's improvement")
+    print("is smaller than its own variation. `NO` means the row is a statement")
+    print("about the budget, not about the algorithm. `*` marks a normalised reward.")
     print("clears = vehicles completed as a fraction of the best baseline's; a cell")
     print("below 95% metered traffic away rather than controlling it, and its")
     print("travel time is not a control result.")

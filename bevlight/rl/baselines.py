@@ -347,6 +347,43 @@ def progress_callback(run_dir, every: int = 2000, started: float | None = None,
     return Progress()
 
 
+def converged(history: list[dict], key: str = "return_vs_max_pressure") -> dict:
+    """Has the curve stopped moving, by a rule rather than by eye?
+
+    The last quarter of training against the quarter before it: converged when
+    the improvement between them is smaller than the curve's own variation
+    inside the last quarter. In words, the run has stopped changing faster than
+    it wobbles.
+
+    It is deliberately a weak test. A strong one -- a slope indistinguishable
+    from zero -- calls almost nothing converged on curves this noisy, and the
+    question being asked is narrower: is this number safe to put in a table, or
+    is the algorithm still visibly improving and the row merely a statement
+    about the budget? PPO at 60 000 steps failed this; DQN passed it by 40 000.
+
+    Returns the numbers behind the verdict, not just the verdict, so a reader
+    can disagree with the threshold without rerunning anything.
+    """
+    values = [entry[key] for entry in history
+              if entry.get(key) is not None]
+    if len(values) < 8:
+        return {"converged": None, "reason": "too few points to judge"}
+    quarter = max(2, len(values) // 4)
+    last, previous = values[-quarter:], values[-2 * quarter:-quarter]
+    mean_last = sum(last) / len(last)
+    mean_previous = sum(previous) / len(previous)
+    spread = (sum((v - mean_last) ** 2 for v in last) / len(last)) ** 0.5
+    improvement = mean_previous - mean_last
+    return {
+        "converged": bool(abs(improvement) < spread),
+        "final": round(mean_last, 4),
+        "previous": round(mean_previous, 4),
+        "improvement": round(improvement, 4),
+        "spread": round(spread, 4),
+        "points": len(values),
+    }
+
+
 def controller_rollout(spec: str, junction: str, plan: str, demand: str,
                        seed: int, steps: int | None = None,
                        cache_dir: Path | None = None) -> dict:

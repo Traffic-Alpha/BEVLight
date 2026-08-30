@@ -404,20 +404,24 @@ def test_the_batch_conversion_keeps_gather_indices_integral():
     assert batch["time_in_phase"].dim() == 1
 
 
-def test_a_discrete_on_policy_baseline_gets_what_a_discrete_task_needs():
-    """SB3's defaults are calibrated for continuous control, not for this.
+def test_only_what_the_data_asked_for_is_changed():
+    """One measured defect, one change; the reflexes are left alone.
 
-    `ent_coef=0.0` leaves nothing pushing a categorical policy to stay
-    exploratory, and the first pass measured the consequence: entropy sat at
-    1.02 after two hundred thousand steps against 1.19 for a policy still
-    uniform over the same mix of three- and four-phase junctions. These are the
-    values SB3's own Atari configuration uses, not values tuned against results.
+    The first pass looked like a policy that would not explore -- entropy 1.02
+    against 1.19 for uniform after two hundred thousand steps -- and an entropy
+    bonus is the reflex. It would have been the wrong one: the policy had not
+    collapsed, it had barely moved, because `policy_gradient_loss` was 0.01
+    against a `value_loss` of 27. Paying it to stay uniform fights the
+    decisiveness it was failing to acquire.
+
+    So `ent_coef`, `n_epochs` and `batch_size` stay at SB3's values, and the
+    single change -- normalising the return so the two halves of the loss are
+    comparable -- is applied where the env is built, not here.
     """
     for name in ("ppo", "maskable_ppo"):
         built = built_kwargs(name, 16)
-        assert built["ent_coef"] == 0.01
-        assert built["n_epochs"] == 4
-        assert built["batch_size"] == 256
+        for key in ("ent_coef", "n_epochs", "batch_size"):
+            assert key not in built, f"{name} had {key} set without evidence for it"
 
 
 def test_the_off_policy_baseline_is_left_at_its_own_defaults():

@@ -56,23 +56,19 @@ class Algorithm:
         return getattr(importlib.import_module(self.module), self.attribute)
 
 
-#: What a discrete action space needs and SB3's defaults do not give it. These
-#: are the values SB3's own Atari configuration uses, not values tuned against
-#: this task's results.
+#: Nothing yet. The one setting this task was measured to need is the return
+#: normalisation applied in `rl baseline`, not a constructor argument.
 #:
-#: `ent_coef` is the one that matters most. At the default 0.0 nothing pushes a
-#: categorical policy to stay exploratory, and this one did not become decisive
-#: at all: its entropy sat at 1.02 after two hundred thousand steps against 1.19
-#: for a uniform policy over the same mix of three- and four-phase junctions.
-#:
-#: `n_epochs` drops from ten to four because ten passes over one rollout is what
-#: drove `clip_fraction` to 0.22 -- the policy trying to move and being held back
-#: on a fifth of its samples.
-DISCRETE_ON_POLICY = {
-    "ent_coef": 0.01,
-    "n_epochs": 4,
-    "batch_size": 256,
-}
+#: `ent_coef` is deliberately left at SB3's 0.0. The first pass looked like a
+#: policy that would not explore -- entropy 1.02 against 1.19 for uniform after
+#: two hundred thousand steps -- and an entropy bonus is the reflex for that.
+#: It would have been the wrong reflex: the policy had not collapsed, it had
+#: barely moved, because `policy_gradient_loss` was 0.01 against a `value_loss`
+#: of 27. Paying it to stay uniform would have fought the decisiveness it was
+#: failing to acquire. `n_epochs` and `batch_size` are left alone for the same
+#: reason -- `clip_fraction` at 0.22 is most likely the same value-dominated
+#: gradient, and changing three things at once measures none of them.
+DISCRETE_ON_POLICY: dict = {}
 
 
 #: Name -> implementation. The name is what `--algo` takes and what a run's

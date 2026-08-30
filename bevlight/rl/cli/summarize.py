@@ -85,7 +85,9 @@ def main(argv=None) -> int:
                 continue
             entry = block[args.baseline]
             rows.append((entry["median_delta_travel_incl"], run, block, entry))
-        for _, run, block, entry in sorted(rows):
+        # Sort on the delta alone: two cells can tie on it, and the tuple's
+        # next element is a dict, which does not compare.
+        for _, run, block, entry in sorted(rows, key=lambda row: row[0]):
             shortfall = block.get("throughput_shortfall", 0.0)
             flag = "" if block.get("comparable") else "  <- not comparable"
             verdict = run["convergence"].get("converged")
